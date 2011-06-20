@@ -1,0 +1,35 @@
+cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+project(mp3sync)
+
+if(CMAKE_COMPILER_IS_GNUCXX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -ggdb -O0")
+endif(CMAKE_COMPILER_IS_GNUCXX)
+
+find_package(Boost 1.46.0 COMPONENTS filesystem system REQUIRED)
+
+find_package(PkgConfig)
+pkg_check_modules(TAGLIB REQUIRED taglib)
+
+set(MP3SYNC_SOURCES
+    src/main.cpp
+    src/Walker.cpp)
+
+set(MP3SYNC_HEADERS
+    src/Walker.h)
+
+include_directories(${Boost_INCLUDE_DIRS} ${TAGLIB_INCLUDE_DIRS})
+
+add_executable(mp3sync ${MP3SYNC_SOURCES} ${MP3SYNC_HEADERS})
+target_link_libraries(mp3sync ${Boost_LIBRARIES} ${TAGLIB_LIBRARIES})
+
+install(TARGETS mp3sync DESTINATION bin)
+
+set(CPACK_PACKAGE_VERSION_MAJOR "1")
+set(CPACK_PACKAGE_VERSION_MINOR "0")
+set(CPACK_PACKAGE_VERSION_PATCH "0")
+set(CPACK_SOURCE_GENERATOR "TGZ")
+set(CPACK_SOURCE_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
+set(CPACK_SOURCE_IGNORE_FILES "/.git;/.gitignore;${CPACK_SOURCE_IGNORE_FILES}")
+include(CPack)
+add_custom_target(dist COMMAND ${CMAKE_MAKE_PROGRAM} package_source)
