@@ -10,6 +10,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
+#include <sys/stat.h>
 #include <algorithm>
 #include <exception>
 #include <iostream>
@@ -99,6 +100,28 @@ void Walker::visit_file(const fs::path &p)
 	// Get and normalize the extension and calculate the new filename if converted
     std::string ext = boost::to_lower_copy(p.extension().string());
     fs::path output_file = m_output_dir / (p.stem().string() + ".mp3");
+
+    // Stat the output file to check if we should proceed
+    if (m_overwrite != OverwriteAlways) {
+        struct stat out_st;
+        if (!stat(output_file.c_str(), &out_st)) {
+            // If we're never overwriting it, nothing else to do
+            if (m_overwrite == OverwriteNever) {
+                std::cout << "mp3sync: skipping `" << p << "' (not overwriting)" << std::endl;
+                return;
+            }
+            // m_overwrite == OverwriteAuto, check timestamps
+            struct stat in_st;
+            if (stat(p.string().c_str(), &in_st) == -1) {
+                std::cerr << "mp3sync: stat(2) failed for `" << p << '`' << std::endl;
+                return;
+            }
+            if (in_st.st_mtime >= out_st.st_mtime) {
+                std::cout << "mp3sync: skipping `" << p << "' (not overwriting)" << std::endl;
+                return;
+            }
+        }
+    }
 
     std::cout << "XXX " << p << " (" << ext << ") -> " << output_file << std::endl;
 }
