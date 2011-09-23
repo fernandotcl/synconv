@@ -13,6 +13,9 @@
 #include <boost/filesystem.hpp>
 #include <vector>
 
+#include "FlacCodec.h"
+#include "LameCodec.h"
+
 class Walker
 {
     public:
@@ -35,11 +38,17 @@ class Walker
         void visit_file(const boost::filesystem::path &p);
         bool visit_directory(const boost::filesystem::path &p);
 
+        bool check_output_dir(const boost::filesystem::path &output_dir);
+        bool create_output_dir();
+
         OverwriteMode m_overwrite;
         bool m_recursive, m_copy_other;
 
         boost::filesystem::path m_output_dir, m_base_output_dir, m_base_dir;
         bool m_output_dir_created, m_output_dir_error;
+
+        FlacCodec m_flac_codec;
+        LameCodec m_lame_codec;
 };
 
 #endif

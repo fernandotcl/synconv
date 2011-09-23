@@ -9,6 +9,7 @@ endif(CMAKE_COMPILER_IS_GNUCXX)
 find_package(Boost 1.46.0 COMPONENTS filesystem system REQUIRED)
 
 find_package(PkgConfig)
+pkg_check_modules(LIBPIPELINE REQUIRED libpipeline)
 pkg_check_modules(TAGLIB REQUIRED taglib)
 
 set(MP3SYNC_SOURCES
@@ -16,12 +17,17 @@ set(MP3SYNC_SOURCES
     src/Walker.cpp)
 
 set(MP3SYNC_HEADERS
+    src/Codec.h
+    src/Decoder.h
+    src/Encoder.h
+    src/FlacCodec.h
+    src/LameCodec.h
     src/Walker.h)
 
-include_directories(${Boost_INCLUDE_DIRS} ${TAGLIB_INCLUDE_DIRS})
+include_directories(${Boost_INCLUDE_DIRS} ${LIBPIPELINE_INCLUDE_DIRS} ${TAGLIB_INCLUDE_DIRS})
 
 add_executable(mp3sync ${MP3SYNC_SOURCES} ${MP3SYNC_HEADERS})
-target_link_libraries(mp3sync ${Boost_LIBRARIES} ${TAGLIB_LIBRARIES})
+target_link_libraries(mp3sync ${Boost_LIBRARIES} ${LIBPIPELINE_LIBRARIES} ${TAGLIB_LIBRARIES})
 
 install(TARGETS mp3sync DESTINATION bin)
 

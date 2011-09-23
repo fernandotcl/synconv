@@ -11,9 +11,15 @@
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <algorithm>
 #include <exception>
+#include <fcntl.h>
 #include <iostream>
+
+extern "C" {
+#include <pipeline.h>
+}
 
 #include "Walker.h"
 
@@ -41,6 +47,21 @@ Walker::Walker()
 {
 }
 
+bool Walker::check_output_dir(const fs::path &output_dir)
+{
+    m_output_dir_created = false;
+    m_output_dir_error = false;
+    if (fs::exists(m_output_dir)) {
+        if (!fs::is_directory(m_output_dir)) {
+            std::cerr << "mp3sync: cannot overwrite non-directory `" << m_output_dir
+                << "' with directory `" << output_dir << "'" << std::endl;
+            return false;
+        }
+        m_output_dir_created = true;
+    }
+    return true;
+}
+
 void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir)
 {
     output_dir = fs::absolute(output_dir);
@@ -52,6 +73,8 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
             m_output_dir = output_dir;
             if (!boost::ends_with(p.string(), "/") && fs::exists(output_dir))
                 m_output_dir /= p.filename();
+            if (!check_output_dir(output_dir))
+                continue;
 
             // Walk the hierarchy
             m_base_output_dir = m_output_dir;
@@ -66,9 +89,8 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
         else if (fs::is_regular_file(p)) {
             // Just convert the single file
             m_output_dir = output_dir;
-            m_output_dir_created = false;
-            m_output_dir_error = false;
-            visit_file(fs::absolute(p));
+            if (check_output_dir(output_dir))
+                visit_file(fs::absolute(p));
         }
         else {
             std::cerr << "mp3sync: skipping `" << p << "' (not a regular file or directory)" << std::endl;
@@ -89,6 +111,26 @@ bool Walker::visit_directory(const fs::path &p)
     m_output_dir_created = false;
     m_output_dir_error = false;
     return true;
+}
+
+bool Walker::create_output_dir()
+{
+    // All good, we already have an output dir
+    if (m_output_dir_created)
+        return true;
+
+    // Try to create it
+    boost::system::error_code ec;
+    if (fs::create_directory(m_output_dir, ec)) {
+        std::cout << "XXX CREATED " << m_output_dir << std::endl;
+        m_output_dir_created = true;
+        return true;
+    }
+    else {
+        std::cerr << "Unable to create directory `" << m_output_dir << "': " << ec.message() << std::endl;
+        m_output_dir_error = true;
+        return false;
+    }
 }
 
 void Walker::visit_file(const fs::path &p)
@@ -113,7 +155,7 @@ void Walker::visit_file(const fs::path &p)
             // m_overwrite == OverwriteAuto, check timestamps
             struct stat in_st;
             if (stat(p.string().c_str(), &in_st) == -1) {
-                std::cerr << "mp3sync: stat(2) failed for `" << p << '`' << std::endl;
+                std::cerr << "mp3sync: stat(2) failed for `" << p << "`" << std::endl;
                 return;
             }
             if (in_st.st_mtime >= out_st.st_mtime) {
@@ -123,5 +165,61 @@ void Walker::visit_file(const fs::path &p)
         }
     }
 
-    std::cout << "XXX " << p << " (" << ext << ") -> " << output_file << std::endl;
+    // Select the codec based on the extension
+    Decoder *decoder;
+    if (ext == ".flac") {
+        decoder = &m_flac_codec;
+    }
+
+    // Try to copy the file
+    else if (m_copy_other) {
+        if (!create_output_dir())
+            return;
+        boost::system::error_code ec;
+        std::cout << "`" << p << "' -> `" << output_file << "'" << std::endl;
+        fs::copy_file(p, output_file, ec);
+        if (ec)
+            std::cerr << "mp3sync: failed to copy `" << p << "': " << ec.message() << std::endl;
+        return;
+    }
+
+    // Skipping this file
+    else {
+        std::cout << "mp3sync: skipping `" << p << "'" << std::endl;
+        return;
+    }
+
+    // Create the output directory
+    if (!create_output_dir())
+        return;
+
+    // Open the output file
+    int outfd = open(output_file.string().c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    if (outfd == -1) {
+        std::cerr << "mp3sync: unable to open `" << output_file << "' for writing" << std::endl;
+        return;
+    }
+
+    // Create the pipeline
+    std::cout << "`" << p << "' -> `" << output_file << "'" << std::endl;
+    pipeline *pl = pipeline_new();
+    pipeline_want_infile(pl, p.string().c_str());
+    decoder->enter_decoder_pipeline(pl);
+    m_lame_codec.enter_encoder_pipeline(pl);
+    pipeline_want_out(pl, outfd);
+
+    // Get things started
+    pipeline_start(pl);
+    int status = pipeline_wait(pl);
+    pipeline_free(pl);
+    close(outfd);
+
+    // Make sure the commands returned EXIT_SUCCESS
+    if (status != 0) {
+        std::cerr << "mp3sync: failed to transcode `" << p << "'" << std::endl;
+        return;
+    }
+
+    // TODO: Save the permissions and timestamps
+    // TODO: Save the tags
 }

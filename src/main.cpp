@@ -94,7 +94,7 @@ int main(int argc, char **argv)
 
 	// If multiple input paths are specified, the destination directory must exist
 	if (num_args > 2 && !fs::exists(output_dir)) {
-        std::cerr << "mp3sync: target `" << output_dir << " is not a directory" << std::endl;
+        std::cerr << "mp3sync: target `" << output_dir << "' is not a directory" << std::endl;
         return EXIT_FAILURE;
 	}
 
