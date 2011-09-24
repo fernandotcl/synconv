@@ -47,7 +47,9 @@ int main(int argc, char **argv)
         {"dont-recurse", no_argument, NULL, 'R'},
         {"help", no_argument, NULL, 'h'},
         {"overwrite-mode", required_argument, NULL, 'o'},
+        {"quiet", no_argument, NULL, 'q'},
         {"threads", required_argument, NULL, 't'},
+        {"verbose", no_argument, NULL, 'v'},
         {NULL, 0, NULL, 0}
     };
 
@@ -56,7 +58,7 @@ int main(int argc, char **argv)
 
     // Parse the command line options
     int opt;
-    while ((opt = getopt_long(argc, argv, "CRho:t:", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "CRhoq:t:v", long_options, NULL)) != -1) {
         switch (opt) {
             case 'C':
                 walker.set_copy_other(false);
@@ -82,7 +84,15 @@ int main(int argc, char **argv)
                     return EXIT_SUCCESS;
                 }
                 break;
+            case 'q':
+                walker.set_verbose(false);
+                walker.set_quiet(true);
+                break;
             case 't':
+                break;
+            case 'v':
+                walker.set_quiet(false);
+                walker.set_verbose(true);
                 break;
             default:
                 print_usage(std::cerr);

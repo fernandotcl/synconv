@@ -59,7 +59,8 @@ static inline void walk(const fs::path &p, FileVisitor f, DirectoryVisitor d)
 }
 
 Walker::Walker()
-    : m_overwrite(OverwriteAuto), m_recursive(true), m_copy_other(true)
+    : m_overwrite(OverwriteAuto), m_recursive(true), m_copy_other(true),
+      m_verbose(false), m_quiet(false)
 {
 }
 
@@ -109,13 +110,17 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
                 visit_file(fs::absolute(p));
         }
         else {
-            std::cerr << PROGRAM_NAME ": skipping `" << p << "' (not a regular file or directory)" << std::endl;
+            std::cerr << PROGRAM_NAME ": skipping `" << p.string() << "' (not a regular file or directory)" << std::endl;
         }
     }
 }
 
 bool Walker::visit_directory(const fs::path &p)
 {
+    // Notify the user
+    if (!m_verbose && !m_quiet)
+        std::cout << "Entering `" << p.filename().string() << "'" << std::endl;
+
     // Nothing to do if we aren't in recursive mode
     if (!m_recursive)
         return false;
@@ -154,7 +159,7 @@ bool Walker::restore_timestamps(const boost::filesystem::path &p, const struct s
     ut.actime = st.st_atime;
     ut.modtime = st.st_mtime;
     if (utime(p.c_str(), &ut) == -1) {
-        std::cerr << "Unable to change the timestamp metadata for `" << p << "'" << std::endl;
+        std::cerr << "Unable to change the timestamp metadata for `" << p.string() << "'" << std::endl;
         return false;
     }
     return true;
@@ -184,7 +189,7 @@ void Walker::visit_file(const fs::path &p)
     // Stat the input file to get mode and creation time
     struct stat in_st;
     if (stat(p.c_str(), &in_st) == -1) {
-        std::cerr << PROGRAM_NAME ": failed to stat `" << p << "'" << std::endl;
+        std::cerr << PROGRAM_NAME ": failed to stat `" << p.string() << "'" << std::endl;
         return;
     }
 
@@ -194,12 +199,14 @@ void Walker::visit_file(const fs::path &p)
         if (!stat(output_file.c_str(), &out_st)) {
             // If we're never overwriting it, nothing else to do
             if (m_overwrite == OverwriteNever) {
-                std::cout << PROGRAM_NAME ": skipping `" << p << "' (not overwriting)" << std::endl;
+                if (m_verbose)
+                    std::cout << PROGRAM_NAME ": skipping `" << p.string() << "' (not overwriting)" << std::endl;
                 return;
             }
             // m_overwrite == OverwriteAuto, check timestamps
             if (in_st.st_mtime >= out_st.st_mtime) {
-                std::cout << PROGRAM_NAME ": skipping `" << p << "' (not overwriting)" << std::endl;
+                if (m_verbose)
+                    std::cout << PROGRAM_NAME ": skipping `" << p.string() << "' (not overwriting)" << std::endl;
                 return;
             }
         }
@@ -210,16 +217,22 @@ void Walker::visit_file(const fs::path &p)
         if (m_copy_other) {
             if (!create_output_dir())
                 return;
-            std::cout << "`" << p << "' -> `" << output_file << "'" << std::endl;
             boost::system::error_code ec;
             fs::copy_file(p, output_file, fs::copy_option::overwrite_if_exists, ec);
             if (ec)
-                std::cerr << PROGRAM_NAME ": failed to copy `" << p << "': " << ec.message() << std::endl;
+                std::cerr << PROGRAM_NAME ": failed to copy `" << p.string() << "': " << ec.message() << std::endl;
             restore_timestamps(output_file, in_st);
+            if (!m_quiet) {
+                if (m_verbose)
+                    std::cout << "`" << p << "' -> `" << output_file.string() << "'" << std::endl;
+                else
+                    std::cout << "Copied `" << output_file.filename().string() << "'" << std::endl;
+            }
             return;
         }
         else {
-            std::cout << PROGRAM_NAME ": skipping `" << p << "'" << std::endl;
+            if (m_verbose)
+                std::cout << PROGRAM_NAME ": skipping `" << p.string() << "'" << std::endl;
             return;
         }
     }
@@ -231,12 +244,11 @@ void Walker::visit_file(const fs::path &p)
     // Open the output file
     int outfd = open(output_file.c_str(), O_WRONLY | O_CREAT | O_TRUNC, in_st.st_mode);
     if (outfd == -1) {
-        std::cerr << PROGRAM_NAME ": unable to open `" << output_file << "' for writing" << std::endl;
+        std::cerr << PROGRAM_NAME ": unable to open `" << output_file.string() << "' for writing" << std::endl;
         return;
     }
 
     // Create the pipeline
-    std::cout << "`" << p << "' -> `" << output_file << "'" << std::endl;
     pipeline *pl = pipeline_new();
     pipeline_want_infile(pl, p.string().c_str());
     decoder->enter_decoder_pipeline(pl);
@@ -251,7 +263,7 @@ void Walker::visit_file(const fs::path &p)
 
     // Make sure the commands returned EXIT_SUCCESS
     if (status != 0) {
-        std::cerr << PROGRAM_NAME ": failed to transcode `" << p << "'" << std::endl;
+        std::cerr << PROGRAM_NAME ": failed to transcode `" << p.string() << "'" << std::endl;
         return;
     }
 
@@ -263,4 +275,12 @@ void Walker::visit_file(const fs::path &p)
 
     // Restore the timestamps
     restore_timestamps(output_file, in_st);
+
+    // Notify the user
+    if (!m_quiet) {
+        if (m_verbose)
+            std::cout << "`" << p.string() << "' -> `" << output_file.string() << "'" << std::endl;
+        else
+            std::cout << "Transcoded `" << output_file.filename().string() << "'" << std::endl;
+    }
 }

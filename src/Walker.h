@@ -43,6 +43,8 @@ class Walker
         void set_overwrite_mode(OverwriteMode mode) { m_overwrite = mode; }
         void set_recursive(bool recursive) { m_recursive = recursive; }
         void set_copy_other(bool copy_other) { m_copy_other = copy_other; }
+        void set_verbose(bool verbose) { m_verbose = verbose; }
+        void set_quiet(bool quiet) { m_quiet = quiet; }
 
         void walk(const std::vector<boost::filesystem::path> &input_paths,
                 boost::filesystem::path &output_dir);
@@ -61,6 +63,8 @@ class Walker
 
         boost::filesystem::path m_output_dir, m_base_output_dir, m_base_dir;
         bool m_output_dir_created, m_output_dir_error;
+
+        bool m_verbose, m_quiet;
 
         FlacCodec m_flac_codec;
         LameCodec m_lame_codec;
