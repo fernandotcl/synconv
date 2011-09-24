@@ -68,8 +68,8 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
     output_dir = fs::absolute(output_dir);
     BOOST_FOREACH(const fs::path &p, input_paths) {
         if (fs::is_directory(p)) {
-			// If the last character of the input directory is the path separator
-			// or if the output directory doesn't exist, copy its contents instead
+            // If the last character of the input directory is the path separator
+            // or if the output directory doesn't exist, copy its contents instead
             // (like the Unix cp command does)
             m_output_dir = output_dir;
             if (!boost::ends_with(p.string(), "/") && fs::exists(output_dir))
@@ -136,13 +136,24 @@ bool Walker::create_output_dir()
 
 void Walker::visit_file(const fs::path &p)
 {
-	// Don't do anything if the output directory is in error
+    // Don't do anything if the output directory is in error
     if (m_output_dir_error)
         return;
 
-	// Get and normalize the extension and calculate the new filename if converted
+    // Get and normalize the extension
     std::string ext = boost::to_lower_copy(p.extension().string());
-    fs::path output_file = m_output_dir / (p.stem().string() + ".mp3");
+
+    // Select the codec based on the extension
+    Decoder *decoder = NULL;
+    if (ext == ".flac")
+        decoder = &m_flac_codec;
+
+    // Create the output filename
+    fs::path output_file;
+    if (decoder)
+        output_file = m_output_dir / (p.stem().string() + ".mp3");
+    else
+        output_file = m_output_dir / p.filename();
 
     // Stat the output file to check if we should proceed
     if (m_overwrite != OverwriteAlways) {
@@ -166,28 +177,22 @@ void Walker::visit_file(const fs::path &p)
         }
     }
 
-    // Select the codec based on the extension
-    Decoder *decoder;
-    if (ext == ".flac") {
-        decoder = &m_flac_codec;
-    }
-
-    // Try to copy the file
-    else if (m_copy_other) {
-        if (!create_output_dir())
+    // Either copy or skip the file if we don't have a decoder for it
+    if (!decoder) {
+        if (m_copy_other) {
+            if (!create_output_dir())
+                return;
+            std::cout << "`" << p << "' -> `" << output_file << "'" << std::endl;
+            boost::system::error_code ec;
+            fs::copy_file(p, output_file, ec);
+            if (ec)
+                std::cerr << PROGRAM_NAME ": failed to copy `" << p << "': " << ec.message() << std::endl;
             return;
-        boost::system::error_code ec;
-        std::cout << "`" << p << "' -> `" << output_file << "'" << std::endl;
-        fs::copy_file(p, output_file, ec);
-        if (ec)
-            std::cerr << PROGRAM_NAME ": failed to copy `" << p << "': " << ec.message() << std::endl;
-        return;
-    }
-
-    // Skipping this file
-    else {
-        std::cout << PROGRAM_NAME ": skipping `" << p << "'" << std::endl;
-        return;
+        }
+        else {
+            std::cout << PROGRAM_NAME ": skipping `" << p << "'" << std::endl;
+            return;
+        }
     }
 
     // Create the output directory
