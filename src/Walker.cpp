@@ -204,7 +204,7 @@ void Walker::visit_file(const fs::path &p)
                 return;
             }
             // m_overwrite == OverwriteAuto, check timestamps
-            if (in_st.st_mtime >= out_st.st_mtime) {
+            if (in_st.st_mtime <= out_st.st_mtime) {
                 if (m_verbose)
                     std::cout << PROGRAM_NAME ": skipping `" << p.string() << "' (not overwriting)" << std::endl;
                 return;
