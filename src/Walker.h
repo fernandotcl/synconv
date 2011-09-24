@@ -28,6 +28,7 @@
 
 #include "FlacCodec.h"
 #include "LameCodec.h"
+#include "VorbisCodec.h"
 
 class Walker
 {
@@ -68,6 +69,7 @@ class Walker
 
         FlacCodec m_flac_codec;
         LameCodec m_lame_codec;
+        VorbisCodec m_vorbis_codec;
 };
 
 #endif

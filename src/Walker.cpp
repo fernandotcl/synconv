@@ -178,6 +178,8 @@ void Walker::visit_file(const fs::path &p)
     Decoder *decoder = NULL;
     if (ext == ".flac")
         decoder = &m_flac_codec;
+    else if (ext == ".ogg" || ext == ".oga")
+        decoder = &m_vorbis_codec;
 
     // Create the output filename
     fs::path output_file;

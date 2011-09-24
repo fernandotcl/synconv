@@ -23,6 +23,7 @@ set(SYNCONV_HEADERS
     src/Encoder.h
     src/FlacCodec.h
     src/LameCodec.h
+    src/VorbisCodec.h
     src/Walker.h)
 
 include_directories(${Boost_INCLUDE_DIRS} ${LIBPIPELINE_INCLUDE_DIRS} ${TAGLIB_INCLUDE_DIRS})
