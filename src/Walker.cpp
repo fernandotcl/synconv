@@ -155,6 +155,13 @@ void Walker::visit_file(const fs::path &p)
     else
         output_file = m_output_dir / p.filename();
 
+    // Stat the input file to get mode and creation time
+    struct stat in_st;
+    if (stat(p.c_str(), &in_st) == -1) {
+        std::cerr << PROGRAM_NAME ": failed to stat `" << p << "'" << std::endl;
+        return;
+    }
+
     // Stat the output file to check if we should proceed
     if (m_overwrite != OverwriteAlways) {
         struct stat out_st;
@@ -165,11 +172,6 @@ void Walker::visit_file(const fs::path &p)
                 return;
             }
             // m_overwrite == OverwriteAuto, check timestamps
-            struct stat in_st;
-            if (stat(p.string().c_str(), &in_st) == -1) {
-                std::cerr << PROGRAM_NAME ": stat(2) failed for `" << p << "`" << std::endl;
-                return;
-            }
             if (in_st.st_mtime >= out_st.st_mtime) {
                 std::cout << PROGRAM_NAME ": skipping `" << p << "' (not overwriting)" << std::endl;
                 return;
@@ -184,7 +186,7 @@ void Walker::visit_file(const fs::path &p)
                 return;
             std::cout << "`" << p << "' -> `" << output_file << "'" << std::endl;
             boost::system::error_code ec;
-            fs::copy_file(p, output_file, ec);
+            fs::copy_file(p, output_file, fs::copy_option::overwrite_if_exists, ec);
             if (ec)
                 std::cerr << PROGRAM_NAME ": failed to copy `" << p << "': " << ec.message() << std::endl;
             return;
@@ -200,7 +202,7 @@ void Walker::visit_file(const fs::path &p)
         return;
 
     // Open the output file
-    int outfd = open(output_file.string().c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    int outfd = open(output_file.c_str(), O_WRONLY | O_CREAT | O_TRUNC, in_st.st_mode);
     if (outfd == -1) {
         std::cerr << PROGRAM_NAME ": unable to open `" << output_file << "' for writing" << std::endl;
         return;
@@ -226,6 +228,6 @@ void Walker::visit_file(const fs::path &p)
         return;
     }
 
-    // TODO: Save the permissions and timestamps
+    // TODO: Save the timestamps
     // TODO: Save the tags
 }
