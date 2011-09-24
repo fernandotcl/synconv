@@ -12,6 +12,8 @@
 #include <boost/foreach.hpp>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <taglib/fileref.h>
+#include <taglib/tag.h>
 #include <algorithm>
 #include <exception>
 #include <fcntl.h>
@@ -241,7 +243,11 @@ void Walker::visit_file(const fs::path &p)
         return;
     }
 
-    // TODO: Transfer the tags
+    // Transfer the tags
+    TagLib::FileRef in_tags(p.c_str());
+    TagLib::FileRef out_tags(output_file.c_str());
+    TagLib::Tag::duplicate(in_tags.tag(), out_tags.tag());
+    out_tags.save();
 
     // Restore the timestamps
     restore_timestamps(output_file, in_st);
