@@ -12,11 +12,11 @@ find_package(PkgConfig)
 pkg_check_modules(LIBPIPELINE REQUIRED libpipeline)
 pkg_check_modules(TAGLIB REQUIRED taglib)
 
-set(MP3SYNC_SOURCES
+set(SYNCONV_SOURCES
     src/main.cpp
     src/Walker.cpp)
 
-set(MP3SYNC_HEADERS
+set(SYNCONV_HEADERS
     src/Codec.h
     src/config.h
     src/Decoder.h
@@ -27,7 +27,7 @@ set(MP3SYNC_HEADERS
 
 include_directories(${Boost_INCLUDE_DIRS} ${LIBPIPELINE_INCLUDE_DIRS} ${TAGLIB_INCLUDE_DIRS})
 
-add_executable(synconv ${MP3SYNC_SOURCES} ${MP3SYNC_HEADERS})
+add_executable(synconv ${SYNCONV_SOURCES} ${SYNCONV_HEADERS})
 target_link_libraries(synconv ${Boost_LIBRARIES} ${LIBPIPELINE_LIBRARIES} ${TAGLIB_LIBRARIES})
 
 install(TARGETS synconv DESTINATION bin)
