@@ -16,6 +16,7 @@
 #include <exception>
 #include <fcntl.h>
 #include <iostream>
+#include <utime.h>
 
 extern "C" {
 #include <pipeline.h>
@@ -123,7 +124,6 @@ bool Walker::create_output_dir()
     // Try to create it
     boost::system::error_code ec;
     if (fs::create_directory(m_output_dir, ec)) {
-        std::cout << "XXX CREATED " << m_output_dir << std::endl;
         m_output_dir_created = true;
         return true;
     }
@@ -132,6 +132,18 @@ bool Walker::create_output_dir()
         m_output_dir_error = true;
         return false;
     }
+}
+
+bool Walker::restore_timestamps(const boost::filesystem::path &p, const struct stat &st)
+{
+    struct utimbuf ut;
+    ut.actime = st.st_atime;
+    ut.modtime = st.st_mtime;
+    if (utime(p.c_str(), &ut) == -1) {
+        std::cerr << "Unable to change the timestamp metadata for `" << p << "'" << std::endl;
+        return false;
+    }
+    return true;
 }
 
 void Walker::visit_file(const fs::path &p)
@@ -189,6 +201,7 @@ void Walker::visit_file(const fs::path &p)
             fs::copy_file(p, output_file, fs::copy_option::overwrite_if_exists, ec);
             if (ec)
                 std::cerr << PROGRAM_NAME ": failed to copy `" << p << "': " << ec.message() << std::endl;
+            restore_timestamps(output_file, in_st);
             return;
         }
         else {
@@ -228,6 +241,8 @@ void Walker::visit_file(const fs::path &p)
         return;
     }
 
-    // TODO: Save the timestamps
-    // TODO: Save the tags
+    // TODO: Transfer the tags
+
+    // Restore the timestamps
+    restore_timestamps(output_file, in_st);
 }

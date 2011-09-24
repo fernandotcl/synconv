@@ -11,6 +11,7 @@
 #define WALKER_H
 
 #include <boost/filesystem.hpp>
+#include <sys/stat.h>
 #include <vector>
 
 #include "FlacCodec.h"
@@ -40,6 +41,8 @@ class Walker
 
         bool check_output_dir(const boost::filesystem::path &output_dir);
         bool create_output_dir();
+
+        bool restore_timestamps(const boost::filesystem::path &p, const struct stat &st);
 
         OverwriteMode m_overwrite;
         bool m_recursive, m_copy_other;
