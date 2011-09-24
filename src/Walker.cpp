@@ -142,7 +142,7 @@ bool Walker::create_output_dir()
 
     // Try to create it
     boost::system::error_code ec;
-    if (fs::create_directory(m_output_dir, ec)) {
+    if (fs::create_directories(m_output_dir, ec)) {
         m_output_dir_created = true;
         return true;
     }
