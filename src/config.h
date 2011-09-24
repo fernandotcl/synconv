@@ -7,14 +7,9 @@
  *
  */
 
-#ifndef CODEC_H
-#define CODEC_H
+#ifndef CONFIG_H
+#define CONFIG_H
 
-#include "Decoder.h"
-#include "Encoder.h"
-
-class Codec : public Encoder, public Decoder
-{
-};
+#define PROGRAM_NAME "synconv"
 
 #endif

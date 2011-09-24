@@ -1,5 +1,5 @@
 /*
- * This file is part of mp3sync.
+ * This file is part of synconv.
  *
  * © 2011 Fernando Tarlá Cardoso Lemos
  *

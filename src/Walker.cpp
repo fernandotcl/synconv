@@ -1,5 +1,5 @@
 /*
- * This file is part of mp3sync.
+ * This file is part of synconv.
  *
  * © 2011 Fernando Tarlá Cardoso Lemos
  *
@@ -21,6 +21,7 @@ extern "C" {
 #include <pipeline.h>
 }
 
+#include "config.h"
 #include "Walker.h"
 
 namespace fs = boost::filesystem;
@@ -53,7 +54,7 @@ bool Walker::check_output_dir(const fs::path &output_dir)
     m_output_dir_error = false;
     if (fs::exists(m_output_dir)) {
         if (!fs::is_directory(m_output_dir)) {
-            std::cerr << "mp3sync: cannot overwrite non-directory `" << m_output_dir
+            std::cerr << PROGRAM_NAME ": cannot overwrite non-directory `" << m_output_dir
                 << "' with directory `" << output_dir << "'" << std::endl;
             return false;
         }
@@ -83,7 +84,7 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
                 ::walk(p, boost::bind(&Walker::visit_file, this, _1), boost::bind(&Walker::visit_directory, this, _1));
             }
             catch (std::exception &e) {
-                std::cerr << "mp3sync: " << e.what() << std::endl;
+                std::cerr << PROGRAM_NAME ": " << e.what() << std::endl;
             }
         }
         else if (fs::is_regular_file(p)) {
@@ -93,7 +94,7 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
                 visit_file(fs::absolute(p));
         }
         else {
-            std::cerr << "mp3sync: skipping `" << p << "' (not a regular file or directory)" << std::endl;
+            std::cerr << PROGRAM_NAME ": skipping `" << p << "' (not a regular file or directory)" << std::endl;
         }
     }
 }
@@ -149,17 +150,17 @@ void Walker::visit_file(const fs::path &p)
         if (!stat(output_file.c_str(), &out_st)) {
             // If we're never overwriting it, nothing else to do
             if (m_overwrite == OverwriteNever) {
-                std::cout << "mp3sync: skipping `" << p << "' (not overwriting)" << std::endl;
+                std::cout << PROGRAM_NAME ": skipping `" << p << "' (not overwriting)" << std::endl;
                 return;
             }
             // m_overwrite == OverwriteAuto, check timestamps
             struct stat in_st;
             if (stat(p.string().c_str(), &in_st) == -1) {
-                std::cerr << "mp3sync: stat(2) failed for `" << p << "`" << std::endl;
+                std::cerr << PROGRAM_NAME ": stat(2) failed for `" << p << "`" << std::endl;
                 return;
             }
             if (in_st.st_mtime >= out_st.st_mtime) {
-                std::cout << "mp3sync: skipping `" << p << "' (not overwriting)" << std::endl;
+                std::cout << PROGRAM_NAME ": skipping `" << p << "' (not overwriting)" << std::endl;
                 return;
             }
         }
@@ -179,13 +180,13 @@ void Walker::visit_file(const fs::path &p)
         std::cout << "`" << p << "' -> `" << output_file << "'" << std::endl;
         fs::copy_file(p, output_file, ec);
         if (ec)
-            std::cerr << "mp3sync: failed to copy `" << p << "': " << ec.message() << std::endl;
+            std::cerr << PROGRAM_NAME ": failed to copy `" << p << "': " << ec.message() << std::endl;
         return;
     }
 
     // Skipping this file
     else {
-        std::cout << "mp3sync: skipping `" << p << "'" << std::endl;
+        std::cout << PROGRAM_NAME ": skipping `" << p << "'" << std::endl;
         return;
     }
 
@@ -196,7 +197,7 @@ void Walker::visit_file(const fs::path &p)
     // Open the output file
     int outfd = open(output_file.string().c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if (outfd == -1) {
-        std::cerr << "mp3sync: unable to open `" << output_file << "' for writing" << std::endl;
+        std::cerr << PROGRAM_NAME ": unable to open `" << output_file << "' for writing" << std::endl;
         return;
     }
 
@@ -216,7 +217,7 @@ void Walker::visit_file(const fs::path &p)
 
     // Make sure the commands returned EXIT_SUCCESS
     if (status != 0) {
-        std::cerr << "mp3sync: failed to transcode `" << p << "'" << std::endl;
+        std::cerr << PROGRAM_NAME ": failed to transcode `" << p << "'" << std::endl;
         return;
     }
 

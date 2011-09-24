@@ -1,5 +1,5 @@
 /*
- * This file is part of mp3sync.
+ * This file is part of synconv.
  *
  * © 2011 Fernando Tarlá Cardoso Lemos
  *
@@ -14,6 +14,7 @@
 #include <getopt.h>
 #include <iostream>
 
+#include "config.h"
 #include "Walker.h"
 
 namespace fs = boost::filesystem;
@@ -22,8 +23,8 @@ static void print_usage(std::ostream &out)
 {
     out << "\
 Usage: \n\
-    mp3sync [options] <file or dir> [<file or dir>] [...] <output dir>\n\
-    mp3sync --help\
+    synconv [options] <file or dir> [<file or dir>] [...] <output dir>\n\
+    synconv --help\
 " << std::endl;
 }
 
@@ -88,13 +89,13 @@ int main(int argc, char **argv)
     fs::path output_dir(argv[argc - 1]);
     bool output_dir_exists = fs::exists(output_dir);
     if (output_dir_exists && !fs::is_directory(output_dir)) {
-        std::cerr << "mp3sync: target `" << output_dir << " is not a directory" << std::endl;
+        std::cerr << PROGRAM_NAME ": target `" << output_dir << " is not a directory" << std::endl;
         return EXIT_FAILURE;
     }
 
 	// If multiple input paths are specified, the destination directory must exist
 	if (num_args > 2 && !fs::exists(output_dir)) {
-        std::cerr << "mp3sync: target `" << output_dir << "' is not a directory" << std::endl;
+        std::cerr << PROGRAM_NAME ": target `" << output_dir << "' is not a directory" << std::endl;
         return EXIT_FAILURE;
 	}
 
@@ -106,7 +107,7 @@ int main(int argc, char **argv)
 	// Make sure the other arguments are existing files or directories
     BOOST_FOREACH(const fs::path &p, input_paths) {
         if (!fs::exists(p)) {
-            std::cerr << "mp3sync: cannot stat `" << p << "': No such file or directory" << std::endl;
+            std::cerr << PROGRAM_NAME ": cannot stat `" << p << "': No such file or directory" << std::endl;
             return EXIT_FAILURE;
         }
     }

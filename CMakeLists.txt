@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
-project(mp3sync)
+project(synconv)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
@@ -18,6 +18,7 @@ set(MP3SYNC_SOURCES
 
 set(MP3SYNC_HEADERS
     src/Codec.h
+    src/config.h
     src/Decoder.h
     src/Encoder.h
     src/FlacCodec.h
@@ -26,10 +27,10 @@ set(MP3SYNC_HEADERS
 
 include_directories(${Boost_INCLUDE_DIRS} ${LIBPIPELINE_INCLUDE_DIRS} ${TAGLIB_INCLUDE_DIRS})
 
-add_executable(mp3sync ${MP3SYNC_SOURCES} ${MP3SYNC_HEADERS})
-target_link_libraries(mp3sync ${Boost_LIBRARIES} ${LIBPIPELINE_LIBRARIES} ${TAGLIB_LIBRARIES})
+add_executable(synconv ${MP3SYNC_SOURCES} ${MP3SYNC_HEADERS})
+target_link_libraries(synconv ${Boost_LIBRARIES} ${LIBPIPELINE_LIBRARIES} ${TAGLIB_LIBRARIES})
 
-install(TARGETS mp3sync DESTINATION bin)
+install(TARGETS synconv DESTINATION bin)
 
 set(CPACK_PACKAGE_VERSION_MAJOR "1")
 set(CPACK_PACKAGE_VERSION_MINOR "0")
