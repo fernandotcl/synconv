@@ -258,14 +258,21 @@ void Walker::visit_file(const fs::path &p)
     // Get things started
     pipeline_start(pl);
     int status = pipeline_wait(pl);
-    pipeline_free(pl);
-    close(outfd);
 
     // Make sure the commands returned EXIT_SUCCESS
     if (status != 0) {
         std::cerr << PROGRAM_NAME ": failed to transcode `" << p.string() << "'" << std::endl;
+        char *pipeline_str = pipeline_tostring(pl);
+        std::cerr << "The transcoding pipeline was `" << pipeline_str << "'" << std::endl;
+        free(pipeline_str);
+        pipeline_free(pl);
+        close(outfd);
         return;
     }
+
+    // Free the pipeline
+    pipeline_free(pl);
+    close(outfd);
 
     // Transfer the tags
     TagLib::FileRef in_tags(p.c_str());
