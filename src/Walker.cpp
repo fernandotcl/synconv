@@ -292,6 +292,7 @@ void Walker::visit_file(const fs::path &p)
         free(pipeline_str);
         pipeline_free(pl);
         close(outfd);
+        unlink(output_file.c_str());
         return;
     }
 
