@@ -103,7 +103,8 @@ bool Walker::check_output_dir(const fs::path &output_dir)
 void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir)
 {
     output_dir = fs::absolute(output_dir);
-    BOOST_FOREACH(const fs::path &p, input_paths) {
+    BOOST_FOREACH(const fs::path &rel_p, input_paths) {
+        fs::path p(fs::absolute(rel_p));
         if (fs::is_directory(p)) {
             // If the last character of the input directory is the path separator
             // or if the output directory doesn't exist, copy its contents instead
@@ -116,7 +117,7 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
 
             // Walk the hierarchy
             m_base_output_dir = m_output_dir;
-            m_base_dir = fs::absolute(p);
+            m_base_dir = p;
             try {
                 ::walk(p, boost::bind(&Walker::visit_file, this, _1), boost::bind(&Walker::visit_directory, this, _1));
             }
@@ -128,7 +129,7 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
             // Just convert the single file
             m_output_dir = output_dir;
             if (check_output_dir(output_dir))
-                visit_file(fs::absolute(p));
+                visit_file(p);
         }
         else {
             std::cerr << PROGRAM_NAME ": skipping `" << p.string() << "' (not a regular file or directory)" << std::endl;
