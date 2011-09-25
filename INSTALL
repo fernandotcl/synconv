@@ -1,0 +1,33 @@
+Dependencies
+============
+
+Those are the dependencies needed to compile synconv:
+
+* TagLib (libtag1-dev in Debian)
+* Boost headers (libboost-dev in Debian)
+* Boost filesystem (libboost-filesystem-dev in Debian)
+* Boost thread (libboost-thread-dev in Debian)
+* libpipeline (libpipeline-dev in Debian)
+* pkg-config
+* CMake
+
+You probably want the encoders and decoders too. We currently support:
+
+* flac (for FLAC encoding and decoding)
+* lame (for MP3 encoding and decoding)
+* oggenc (vorbis-tools in Debian, for Ogg Vorbis encoding)
+* oggdec (vorbis-tools in Debian, for Ogg Vorbis decoding)
+
+You don't need all of them, just the ones you will use.
+
+
+Installation instructions
+=========================
+
+synconv uses CMake:
+
+$ mkdir /path/to/build_dir
+$ cd /path/to/build_dir
+$ cmake -DCMAKE_INSTALL_PREFIX=/path/to/install_dir /path/to/source_dir
+$ make
+$ make install
