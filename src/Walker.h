@@ -51,6 +51,10 @@ class Walker
         bool set_encoder(const std::string &name);
         bool has_encoder() const { return m_encoder != NULL; }
 
+        void add_flac_option(const std::string &option) { m_flac_codec.add_extra_option(option); }
+        void add_lame_option(const std::string &option) { m_lame_codec.add_extra_option(option); }
+        void add_vorbis_option(const std::string &option) { m_vorbis_codec.add_extra_option(option); }
+
         void walk(const std::vector<boost::filesystem::path> &input_paths,
                 boost::filesystem::path &output_dir);
 

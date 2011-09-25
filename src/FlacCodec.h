@@ -34,7 +34,10 @@ class FlacCodec : public Codec
 
         void enter_encoder_pipeline(pipeline *p)
         {
-            pipeline_command_args(p, "flac", "-s", "-c", "-", NULL);
+            pipecmd *cmd = pipecmd_new_args("flac", "-s", "-c", NULL);
+            add_extra_options(cmd);
+            pipecmd_arg(cmd, "-");
+            pipeline_command(p, cmd);
         }
 };
 

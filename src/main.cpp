@@ -45,6 +45,9 @@ int main(int argc, char **argv)
     struct option long_options[] = {
         {"dont-copy-others", no_argument, NULL, 'C'},
         {"dont-recurse", no_argument, NULL, 'R'},
+        {"flac-option", required_argument, NULL, 'F'},
+        {"lame-option", required_argument, NULL, 'L'},
+        {"vorbis-option", required_argument, NULL, 'V'},
         {"encoder", required_argument, NULL, 'e' },
         {"help", no_argument, NULL, 'h'},
         {"overwrite-mode", required_argument, NULL, 'o'},
@@ -60,13 +63,22 @@ int main(int argc, char **argv)
 
     // Parse the command line options
     int opt;
-    while ((opt = getopt_long(argc, argv, "CRe:ho:qrt:v", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "CF:L:RV:e:ho:qrt:v", long_options, NULL)) != -1) {
         switch (opt) {
             case 'C':
                 walker.set_copy_other(false);
                 break;
+            case 'F':
+                walker.add_flac_option(optarg);
+                break;
+            case 'L':
+                walker.add_lame_option(optarg);
+                break;
             case 'R':
                 walker.set_recursive(false);
+                break;
+            case 'V':
+                walker.add_vorbis_option(optarg);
                 break;
             case 'e':
                 if (!walker.set_encoder(optarg))

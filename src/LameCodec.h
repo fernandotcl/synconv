@@ -34,7 +34,10 @@ class LameCodec : public Codec
 
         void enter_encoder_pipeline(pipeline *p)
         {
-            pipeline_command_args(p, "lame", "-S", "-V2", "-", "-", NULL);
+            pipecmd *cmd = pipecmd_new_args("lame", "-S", NULL);
+            add_extra_options(cmd);
+            pipecmd_args(cmd, "-", "-", NULL);
+            pipeline_command(p, cmd);
         }
 };
 

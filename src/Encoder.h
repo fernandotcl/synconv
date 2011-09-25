@@ -22,6 +22,10 @@
 #ifndef ENCODER_H
 #define ENCODER_H
 
+#include <boost/foreach.hpp>
+#include <list>
+#include <string>
+
 extern "C" {
 #include <pipeline.h>
 }
@@ -33,6 +37,17 @@ class Encoder
         virtual ~Encoder() {};
 
         virtual void enter_encoder_pipeline(pipeline *p) = 0;
+
+        void add_extra_option(const std::string &option) { m_extra_options.push_back(option); }
+
+    protected:
+        void add_extra_options(pipecmd *cmd)
+        {
+            BOOST_FOREACH(const std::string &option, m_extra_options)
+                pipecmd_arg(cmd, option.c_str());
+        }
+
+        std::list<std::string> m_extra_options;
 };
 
 #endif
