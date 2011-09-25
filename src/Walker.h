@@ -22,8 +22,12 @@
 #ifndef WALKER_H
 #define WALKER_H
 
-#include <boost/scoped_ptr.hpp>
+#include <boost/thread/condition_variable.hpp>
+#include <boost/thread/mutex.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/scoped_ptr.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/thread.hpp>
 #include <sys/stat.h>
 #include <vector>
 
@@ -49,6 +53,7 @@ class Walker
         void set_reencode(bool reencode) { m_reencode = reencode; }
         void set_verbose(bool verbose) { m_verbose = verbose; }
         void set_quiet(bool quiet) { m_quiet = quiet; }
+        void set_num_workers(unsigned int num) { m_num_workers = num; }
 
         bool set_encoder(const std::string &name);
         bool has_encoder() const { return m_encoder != NULL; }
@@ -63,6 +68,12 @@ class Walker
                 boost::filesystem::path &output_dir);
 
     private:
+        struct work_unit_t {
+            Decoder *decoder;
+            boost::filesystem::path input, output;
+            struct stat input_st;
+        };
+
         void visit_file(const boost::filesystem::path &p);
         bool visit_directory(const boost::filesystem::path &p);
 
@@ -70,6 +81,9 @@ class Walker
         bool create_output_dir();
 
         bool restore_timestamps(const boost::filesystem::path &p, const struct stat &st);
+
+        void parallel_transcode(boost::shared_ptr<work_unit_t> work);
+        void worker_thread();
 
         void apply_renaming_filter(std::wstring &path_component);
 
@@ -89,6 +103,13 @@ class Walker
         std::wstring m_encoder_ext;
 
         boost::scoped_ptr<RenamingFilter> m_renaming_filter;
+
+        unsigned int m_num_workers;
+        boost::mutex m_mutex, m_workers_mutex;
+        boost::condition_variable m_workers_cond;
+        std::vector<boost::shared_ptr<boost::thread> > m_workers;
+        boost::shared_ptr<work_unit_t> m_work_unit;
+        bool m_workers_should_quit;
 };
 
 #endif

@@ -20,6 +20,7 @@
  */
 
 #include <boost/algorithm/string.hpp>
+#include <boost/thread/locks.hpp>
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 #include <sys/stat.h>
@@ -60,8 +61,9 @@ static inline void walk(const fs::path &p, FileVisitor f, DirectoryVisitor d)
 }
 
 Walker::Walker()
-    : m_overwrite(OverwriteAuto), m_recursive(true), m_copy_other(true),
-      m_verbose(false), m_quiet(false), m_encoder(NULL)
+    : m_overwrite(OverwriteAuto), m_recursive(true),m_copy_other(true),
+      m_verbose(false), m_quiet(false), m_encoder(NULL),
+      m_num_workers(1), m_workers_should_quit(false)
 {
 }
 
@@ -113,6 +115,7 @@ bool Walker::check_output_dir(const fs::path &output_dir)
     m_output_dir_error = false;
     if (fs::exists(m_output_dir)) {
         if (!fs::is_directory(m_output_dir)) {
+            boost::unique_lock<boost::mutex> lock(m_mutex);
             std::cerr << PROGRAM_NAME ": cannot overwrite non-directory `" << m_output_dir
                 << "' with directory `" << output_dir << "'" << std::endl;
             return false;
@@ -124,6 +127,11 @@ bool Walker::check_output_dir(const fs::path &output_dir)
 
 void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir)
 {
+    // Create the worker threads
+    m_workers.reserve(m_num_workers);
+    for (unsigned int i = 0; i < m_num_workers; ++i)
+        m_workers.push_back(boost::shared_ptr<boost::thread>(new boost::thread(boost::bind(&Walker::worker_thread, this))));
+
     output_dir = fs::absolute(output_dir);
     BOOST_FOREACH(const fs::path &rel_p, input_paths) {
         fs::path p(fs::absolute(rel_p));
@@ -144,6 +152,7 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
                 ::walk(p, boost::bind(&Walker::visit_file, this, _1), boost::bind(&Walker::visit_directory, this, _1));
             }
             catch (std::exception &e) {
+                boost::unique_lock<boost::mutex> lock(m_mutex);
                 std::cerr << PROGRAM_NAME ": " << e.what() << std::endl;
             }
         }
@@ -154,16 +163,32 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
                 visit_file(p);
         }
         else {
+            boost::unique_lock<boost::mutex> lock(m_mutex);
             std::cerr << PROGRAM_NAME ": skipping `" << p.string() << "' (not a regular file or directory)" << std::endl;
         }
     }
+
+    {
+        // Wait until all work is done and signal that to the workers
+        boost::unique_lock<boost::mutex> workers_lock(m_workers_mutex);
+        while (m_work_unit.get())
+            m_workers_cond.wait(workers_lock);
+        m_workers_should_quit = true;
+    }
+
+    // Let all workers know and join the threads
+    m_workers_cond.notify_all();
+    BOOST_FOREACH(boost::shared_ptr<boost::thread> worker, m_workers)
+        worker->join();
 }
 
 bool Walker::visit_directory(const fs::path &p)
 {
     // Notify the user
-    if (!m_verbose && !m_quiet)
+    if (!m_verbose && !m_quiet) {
+        boost::unique_lock<boost::mutex> lock(m_mutex);
         std::cout << "Entering `" << p.filename().string() << "'" << std::endl;
+    }
 
     // Nothing to do if we aren't in recursive mode
     if (!m_recursive)
@@ -192,6 +217,7 @@ bool Walker::create_output_dir()
         return true;
     }
     else {
+        boost::unique_lock<boost::mutex> lock(m_mutex);
         std::cerr << "Unable to create directory `" << m_output_dir << "': " << ec.message() << std::endl;
         m_output_dir_error = true;
         return false;
@@ -204,6 +230,7 @@ bool Walker::restore_timestamps(const boost::filesystem::path &p, const struct s
     ut.actime = st.st_atime;
     ut.modtime = st.st_mtime;
     if (utime(p.c_str(), &ut) == -1) {
+        boost::unique_lock<boost::mutex> lock(m_mutex);
         std::cerr << "Unable to change the timestamp metadata for `" << p.string() << "'" << std::endl;
         return false;
     }
@@ -240,6 +267,7 @@ void Walker::visit_file(const fs::path &p)
     // Stat the input file to get mode and creation time
     struct stat in_st;
     if (stat(p.c_str(), &in_st) == -1) {
+        boost::unique_lock<boost::mutex> lock(m_mutex);
         std::cerr << PROGRAM_NAME ": failed to stat `" << p.string() << "'" << std::endl;
         return;
     }
@@ -250,14 +278,18 @@ void Walker::visit_file(const fs::path &p)
         if (!stat(output_file.c_str(), &out_st)) {
             // If we're never overwriting it, nothing else to do
             if (m_overwrite == OverwriteNever) {
-                if (m_verbose)
+                if (m_verbose) {
+                    boost::unique_lock<boost::mutex> lock(m_mutex);
                     std::cout << PROGRAM_NAME ": skipping `" << p.string() << "' (not overwriting)" << std::endl;
+                }
                 return;
             }
             // m_overwrite == OverwriteAuto, check timestamps
             if (in_st.st_mtime <= out_st.st_mtime) {
-                if (m_verbose)
+                if (m_verbose) {
+                    boost::unique_lock<boost::mutex> lock(m_mutex);
                     std::cout << PROGRAM_NAME ": skipping `" << p.string() << "' (not overwriting)" << std::endl;
+                }
                 return;
             }
         }
@@ -270,10 +302,13 @@ void Walker::visit_file(const fs::path &p)
                 return;
             boost::system::error_code ec;
             fs::copy_file(p, output_file, fs::copy_option::overwrite_if_exists, ec);
-            if (ec)
+            if (ec) {
+                boost::unique_lock<boost::mutex> lock(m_mutex);
                 std::cerr << PROGRAM_NAME ": failed to copy `" << p.string() << "': " << ec.message() << std::endl;
+            }
             restore_timestamps(output_file, in_st);
             if (!m_quiet) {
+                boost::unique_lock<boost::mutex> lock(m_mutex);
                 if (m_verbose)
                     std::cout << "`" << p << "' -> `" << output_file.string() << "'" << std::endl;
                 else
@@ -282,8 +317,10 @@ void Walker::visit_file(const fs::path &p)
             return;
         }
         else {
-            if (m_verbose)
+            if (m_verbose) {
+                boost::unique_lock<boost::mutex> lock(m_mutex);
                 std::cout << PROGRAM_NAME ": skipping `" << p.string() << "'" << std::endl;
+            }
             return;
         }
     }
@@ -292,9 +329,36 @@ void Walker::visit_file(const fs::path &p)
     if (!create_output_dir())
         return;
 
+    {
+        // Wait until we can post this work unit
+        boost::unique_lock<boost::mutex> workers_lock(m_workers_mutex);
+        while (m_work_unit.get())
+            m_workers_cond.wait(workers_lock);
+
+        // Post the work unit
+        m_work_unit.reset(new work_unit_t);
+        m_work_unit->decoder = decoder;
+        m_work_unit->input = p;
+        m_work_unit->output = output_file;
+        m_work_unit->input_st = in_st;
+    }
+
+    // Let the workers know
+    m_workers_cond.notify_one();
+}
+
+void Walker::parallel_transcode(boost::shared_ptr<work_unit_t> work)
+{
+    // Get easy references
+    Decoder *decoder = work->decoder;
+    fs::path &p(work->input);
+    fs::path &output_file(work->output);
+    struct stat &in_st(work->input_st);
+
     // Open the output file
     int outfd = open(output_file.c_str(), O_WRONLY | O_CREAT | O_TRUNC, in_st.st_mode);
     if (outfd == -1) {
+        boost::unique_lock<boost::mutex> lock(m_mutex);
         std::cerr << PROGRAM_NAME ": unable to open `" << output_file.string() << "' for writing" << std::endl;
         return;
     }
@@ -312,9 +376,12 @@ void Walker::visit_file(const fs::path &p)
 
     // Make sure the commands returned EXIT_SUCCESS
     if (status != 0) {
-        std::cerr << PROGRAM_NAME ": failed to transcode `" << p.string() << "'" << std::endl;
         char *pipeline_str = pipeline_tostring(pl);
-        std::cerr << "The transcoding pipeline was `" << pipeline_str << "'" << std::endl;
+        {
+            boost::unique_lock<boost::mutex> lock(m_mutex);
+            std::cerr << PROGRAM_NAME ": failed to transcode `" << p.string() << "'" << std::endl;
+            std::cerr << "The transcoding pipeline was `" << pipeline_str << "'" << std::endl;
+        }
         free(pipeline_str);
         pipeline_free(pl);
         close(outfd);
@@ -338,14 +405,43 @@ void Walker::visit_file(const fs::path &p)
     // Notify the user
     if (!m_quiet) {
         if (m_verbose) {
+            boost::unique_lock<boost::mutex> lock(m_mutex);
             std::cout << "`" << p.string() << "' -> `" << output_file.string() << "'" << std::endl;
         }
         else {
+            boost::unique_lock<boost::mutex> lock(m_mutex);
             if (static_cast<Codec *>(decoder) == static_cast<Codec *>(m_encoder))
                 std::cout << "Re-encoded `";
             else
                 std::cout << "Transcoded `";
             std::cout << output_file.filename().string() << "'" << std::endl;
         }
+    }
+}
+
+void Walker::worker_thread()
+{
+    while (true) {
+        boost::shared_ptr<work_unit_t> work;
+        {
+            // Wait until we have a work unit to work on
+            boost::unique_lock<boost::mutex> workers_lock(m_workers_mutex);
+            while (!m_work_unit.get() && !m_workers_should_quit)
+                m_workers_cond.wait(workers_lock);
+
+            // Check if we're done
+            if (m_workers_should_quit)
+                break;
+
+            // Claim the work unit for ourselves
+            work = m_work_unit;
+            m_work_unit.reset();
+        }
+
+        // Notify the producer
+        m_workers_cond.notify_all();
+
+        // Work on the work item
+        parallel_transcode(work);
     }
 }

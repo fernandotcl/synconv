@@ -21,6 +21,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 #include <cstdlib>
 #include <cstring>
 #include <getopt.h>
@@ -114,9 +115,22 @@ int main(int argc, char **argv)
             case 'r':
                 walker.set_reencode(true);
                 break;
-            case 't':
-                // TODO
+            case 't': {
+                int num_workers;
+                try {
+                    num_workers = boost::lexical_cast<unsigned int>(optarg);
+                }
+                catch (boost::bad_lexical_cast &) {
+                    print_usage(std::cerr);
+                    return EXIT_FAILURE;
+                }
+                if (num_workers == 0 || num_workers > 200) {
+                    std::cerr << PROGRAM_NAME ": the number of worker threads must be between 1 and 200" << std::endl;
+                    return EXIT_FAILURE;
+                }
+                walker.set_num_workers(num_workers);
                 break;
+            }
             case 'v':
                 walker.set_quiet(false);
                 walker.set_verbose(true);
