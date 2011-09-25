@@ -37,6 +37,7 @@ extern "C" {
 }
 
 #include "config.h"
+#include "ConservativeRenamingFilter.h"
 #include "Walker.h"
 
 namespace fs = boost::filesystem;
@@ -68,21 +69,42 @@ bool Walker::set_encoder(const std::string &name)
 {
     if (name == "flac") {
         m_encoder = &m_flac_codec;
-        m_encoder_ext = ".flac";
+        m_encoder_ext = L".flac";
     }
     else if (name == "lame") {
         m_encoder = &m_lame_codec;
-        m_encoder_ext = ".mp3";
+        m_encoder_ext = L".mp3";
     }
     else if (name == "vorbis") {
         m_encoder = &m_vorbis_codec;
-        m_encoder_ext = ".ogg";
+        m_encoder_ext = L".ogg";
     }
     else {
         std::cerr << PROGRAM_NAME ": unrecognized encoder name" << std::endl;
         return false;
     }
     return true;
+}
+
+bool Walker::set_renaming_filter(const std::string &filter)
+{
+    if (filter == "conservative") {
+        m_renaming_filter.reset(new ConservativeRenamingFilter);
+    }
+    else if (filter == "none") {
+        m_renaming_filter.reset();
+    }
+    else {
+        std::cerr << PROGRAM_NAME ": unrecognized renaming filter" << std::endl;
+        return false;
+    }
+    return true;
+}
+
+void Walker::apply_renaming_filter(std::wstring &path_component)
+{
+    if (m_renaming_filter.get())
+        path_component = m_renaming_filter->filter(path_component);
 }
 
 bool Walker::check_output_dir(const fs::path &output_dir)
@@ -148,7 +170,8 @@ bool Walker::visit_directory(const fs::path &p)
         return false;
 
     // Calculate the next output dir
-    std::string diff(p.string().substr(m_base_dir.string().size()));
+    std::wstring diff(p.string<std::wstring>().substr(m_base_dir.string<std::wstring>().size() + 1));
+    apply_renaming_filter(diff);
     m_output_dir = m_base_output_dir / diff;
     m_output_dir = fs::absolute(m_output_dir);
     m_output_dir_created = false;
@@ -206,11 +229,13 @@ void Walker::visit_file(const fs::path &p)
         decoder = &m_vorbis_codec;
 
     // Create the output filename
-    fs::path output_file;
+    std::wstring suffix;
     if (decoder)
-        output_file = m_output_dir / (p.stem().string() + m_encoder_ext);
+        suffix = p.stem().string<std::wstring>() + m_encoder_ext;
     else
-        output_file = m_output_dir / p.filename();
+        suffix = p.filename().string<std::wstring>();
+    apply_renaming_filter(suffix);
+    fs::path output_file = m_output_dir / suffix;
 
     // Stat the input file to get mode and creation time
     struct stat in_st;

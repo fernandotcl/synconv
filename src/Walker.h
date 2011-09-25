@@ -22,12 +22,14 @@
 #ifndef WALKER_H
 #define WALKER_H
 
+#include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>
 #include <sys/stat.h>
 #include <vector>
 
 #include "FlacCodec.h"
 #include "LameCodec.h"
+#include "RenamingFilter.h"
 #include "VorbisCodec.h"
 
 class Walker
@@ -51,6 +53,8 @@ class Walker
         bool set_encoder(const std::string &name);
         bool has_encoder() const { return m_encoder != NULL; }
 
+        bool set_renaming_filter(const std::string &filter);
+
         void add_flac_option(const std::string &option) { m_flac_codec.add_extra_option(option); }
         void add_lame_option(const std::string &option) { m_lame_codec.add_extra_option(option); }
         void add_vorbis_option(const std::string &option) { m_vorbis_codec.add_extra_option(option); }
@@ -67,6 +71,8 @@ class Walker
 
         bool restore_timestamps(const boost::filesystem::path &p, const struct stat &st);
 
+        void apply_renaming_filter(std::wstring &path_component);
+
         OverwriteMode m_overwrite;
         bool m_recursive, m_copy_other, m_reencode;
 
@@ -80,7 +86,9 @@ class Walker
         VorbisCodec m_vorbis_codec;
 
         Encoder *m_encoder;
-        std::string m_encoder_ext;
+        std::wstring m_encoder_ext;
+
+        boost::scoped_ptr<RenamingFilter> m_renaming_filter;
 };
 
 #endif

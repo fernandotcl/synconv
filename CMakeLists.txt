@@ -14,15 +14,18 @@ pkg_check_modules(TAGLIB REQUIRED taglib)
 
 set(SYNCONV_SOURCES
     src/main.cpp
+    src/RenamingFilter.cpp
     src/Walker.cpp)
 
 set(SYNCONV_HEADERS
     src/Codec.h
     src/config.h
+    src/ConservativeRenamingFilter.h
     src/Decoder.h
     src/Encoder.h
     src/FlacCodec.h
     src/LameCodec.h
+    src/RenamingFilter.h
     src/VorbisCodec.h
     src/Walker.h)
 
