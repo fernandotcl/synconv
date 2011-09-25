@@ -44,8 +44,12 @@ class Walker
         void set_overwrite_mode(OverwriteMode mode) { m_overwrite = mode; }
         void set_recursive(bool recursive) { m_recursive = recursive; }
         void set_copy_other(bool copy_other) { m_copy_other = copy_other; }
+        void set_reencode(bool reencode) { m_reencode = reencode; }
         void set_verbose(bool verbose) { m_verbose = verbose; }
         void set_quiet(bool quiet) { m_quiet = quiet; }
+
+        bool set_encoder(const std::string &name);
+        bool has_encoder() const { return m_encoder != NULL; }
 
         void walk(const std::vector<boost::filesystem::path> &input_paths,
                 boost::filesystem::path &output_dir);
@@ -60,7 +64,7 @@ class Walker
         bool restore_timestamps(const boost::filesystem::path &p, const struct stat &st);
 
         OverwriteMode m_overwrite;
-        bool m_recursive, m_copy_other;
+        bool m_recursive, m_copy_other, m_reencode;
 
         boost::filesystem::path m_output_dir, m_base_output_dir, m_base_dir;
         bool m_output_dir_created, m_output_dir_error;
@@ -70,6 +74,9 @@ class Walker
         FlacCodec m_flac_codec;
         LameCodec m_lame_codec;
         VorbisCodec m_vorbis_codec;
+
+        Encoder *m_encoder;
+        std::string m_encoder_ext;
 };
 
 #endif

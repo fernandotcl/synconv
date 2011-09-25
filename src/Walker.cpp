@@ -60,8 +60,29 @@ static inline void walk(const fs::path &p, FileVisitor f, DirectoryVisitor d)
 
 Walker::Walker()
     : m_overwrite(OverwriteAuto), m_recursive(true), m_copy_other(true),
-      m_verbose(false), m_quiet(false)
+      m_verbose(false), m_quiet(false), m_encoder(NULL)
 {
+}
+
+bool Walker::set_encoder(const std::string &name)
+{
+    if (name == "flac") {
+        m_encoder = &m_flac_codec;
+        m_encoder_ext = ".flac";
+    }
+    else if (name == "lame") {
+        m_encoder = &m_lame_codec;
+        m_encoder_ext = ".mp3";
+    }
+    else if (name == "vorbis") {
+        m_encoder = &m_vorbis_codec;
+        m_encoder_ext = ".ogg";
+    }
+    else {
+        std::cerr << PROGRAM_NAME ": unrecognized encoder name" << std::endl;
+        return false;
+    }
+    return true;
 }
 
 bool Walker::check_output_dir(const fs::path &output_dir)
@@ -178,13 +199,15 @@ void Walker::visit_file(const fs::path &p)
     Decoder *decoder = NULL;
     if (ext == ".flac")
         decoder = &m_flac_codec;
+    else if (ext == ".mp3")
+        decoder = &m_lame_codec;
     else if (ext == ".ogg" || ext == ".oga")
         decoder = &m_vorbis_codec;
 
     // Create the output filename
     fs::path output_file;
     if (decoder)
-        output_file = m_output_dir / (p.stem().string() + ".mp3");
+        output_file = m_output_dir / (p.stem().string() + m_encoder_ext);
     else
         output_file = m_output_dir / p.filename();
 
@@ -215,7 +238,7 @@ void Walker::visit_file(const fs::path &p)
     }
 
     // Either copy or skip the file if we don't have a decoder for it
-    if (!decoder) {
+    if (!decoder || (static_cast<Codec *>(decoder) == static_cast<Codec *>(m_encoder) && !m_reencode)) {
         if (m_copy_other) {
             if (!create_output_dir())
                 return;
@@ -254,7 +277,7 @@ void Walker::visit_file(const fs::path &p)
     pipeline *pl = pipeline_new();
     pipeline_want_infile(pl, p.string().c_str());
     decoder->enter_decoder_pipeline(pl);
-    m_lame_codec.enter_encoder_pipeline(pl);
+    m_encoder->enter_encoder_pipeline(pl);
     pipeline_want_out(pl, outfd);
 
     // Get things started
@@ -287,9 +310,15 @@ void Walker::visit_file(const fs::path &p)
 
     // Notify the user
     if (!m_quiet) {
-        if (m_verbose)
+        if (m_verbose) {
             std::cout << "`" << p.string() << "' -> `" << output_file.string() << "'" << std::endl;
-        else
-            std::cout << "Transcoded `" << output_file.filename().string() << "'" << std::endl;
+        }
+        else {
+            if (static_cast<Codec *>(decoder) == static_cast<Codec *>(m_encoder))
+                std::cout << "Re-encoded `";
+            else
+                std::cout << "Transcoded `";
+            std::cout << output_file.filename().string() << "'" << std::endl;
+        }
     }
 }

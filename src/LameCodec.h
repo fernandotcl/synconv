@@ -29,7 +29,7 @@ class LameCodec : public Codec
     public:
         void enter_decoder_pipeline(pipeline *p)
         {
-            pipeline_command_args(p, "lame", "-S", "--decode", "-", "-", NULL);
+            pipeline_command_args(p, "lame", "-S", "--decode", "--mp3input", "-", "-", NULL);
         }
 
         void enter_encoder_pipeline(pipeline *p)

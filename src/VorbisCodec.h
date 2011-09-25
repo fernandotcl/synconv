@@ -34,7 +34,7 @@ class VorbisCodec : public Codec
 
         void enter_encoder_pipeline(pipeline *p)
         {
-            pipeline_command_args(p, "oggenc", "-Q", "-q6", "-", NULL);
+            pipeline_command_args(p, "oggenc", "-Q", "-r", "-q6", "-", NULL);
         }
 };
 

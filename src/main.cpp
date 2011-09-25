@@ -45,9 +45,11 @@ int main(int argc, char **argv)
     struct option long_options[] = {
         {"dont-copy-others", no_argument, NULL, 'C'},
         {"dont-recurse", no_argument, NULL, 'R'},
+        {"encoder", required_argument, NULL, 'e' },
         {"help", no_argument, NULL, 'h'},
         {"overwrite-mode", required_argument, NULL, 'o'},
         {"quiet", no_argument, NULL, 'q'},
+        {"reencode", no_argument, NULL, 'r'},
         {"threads", required_argument, NULL, 't'},
         {"verbose", no_argument, NULL, 'v'},
         {NULL, 0, NULL, 0}
@@ -58,13 +60,17 @@ int main(int argc, char **argv)
 
     // Parse the command line options
     int opt;
-    while ((opt = getopt_long(argc, argv, "CRhoq:t:v", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "CRe:ho:qrt:v", long_options, NULL)) != -1) {
         switch (opt) {
             case 'C':
                 walker.set_copy_other(false);
                 break;
             case 'R':
                 walker.set_recursive(false);
+                break;
+            case 'e':
+                if (!walker.set_encoder(optarg))
+                    return EXIT_FAILURE;
                 break;
             case 'h':
                 print_usage(std::cout);
@@ -80,15 +86,19 @@ int main(int argc, char **argv)
                     walker.set_overwrite_mode(Walker::OverwriteNever);
                 }
                 else {
-                    print_usage(std::cerr);
-                    return EXIT_SUCCESS;
+                    std::cerr << PROGRAM_NAME ": unrecognized overwrite mode" << std::endl;
+                    return EXIT_FAILURE;
                 }
                 break;
             case 'q':
                 walker.set_verbose(false);
                 walker.set_quiet(true);
                 break;
+            case 'r':
+                walker.set_reencode(true);
+                break;
             case 't':
+                // TODO
                 break;
             case 'v':
                 walker.set_quiet(false);
@@ -99,6 +109,10 @@ int main(int argc, char **argv)
                 return EXIT_FAILURE;
         }
     }
+
+    // Fallback to the LAME encoder
+    if (!walker.has_encoder())
+        walker.set_encoder("lame");
 
     // We need at least an input and an output
     int num_args = argc - optind;
