@@ -25,12 +25,16 @@
 #include <boost/foreach.hpp>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <taglib/fileref.h>
 #include <taglib/tag.h>
 #include <algorithm>
+#include <cstdlib>
 #include <exception>
 #include <fcntl.h>
+#include <fstream>
 #include <iostream>
+#include <unistd.h>
 #include <utime.h>
 
 extern "C" {
@@ -355,12 +359,88 @@ void Walker::parallel_transcode(boost::shared_ptr<work_unit_t> work)
     fs::path &output_file(work->output);
     struct stat &in_st(work->input_st);
 
+    // Create an almost unique temporary filename for errors
+    char tmp_template[] = "/tmp/" PROGRAM_NAME ".XXXXXX";
+    const char *errors_file = mktemp(tmp_template);
+
+    // Fork into a new process because libpipeline isn't thread safe
+    pid_t pid = fork();
+    if (pid == -1) {
+        boost::unique_lock<boost::mutex> lock(m_mutex);
+        std::cerr << PROGRAM_NAME ": unable to fork into another process" << std::endl;
+        return;
+    }
+
+    // If we're the parent, just wait for the child and handle its return code
+    else if (pid != 0) {
+        int status;
+        waitpid(pid, &status, 0);
+        if (!WIFEXITED(status)) {
+            boost::unique_lock<boost::mutex> lock(m_mutex);
+            std::cerr << PROGRAM_NAME ": the forked process crashed (errors file at `" <<  errors_file << "')" << std::endl;
+        }
+        else {
+            int rc = WEXITSTATUS(status);
+            switch (rc) {
+                case EXIT_SUCCESS: {
+                    // Transfer the tags
+                    TagLib::FileRef in_tags(p.c_str());
+                    TagLib::FileRef out_tags(output_file.c_str());
+                    TagLib::Tag::duplicate(in_tags.tag(), out_tags.tag());
+                    out_tags.save();
+
+                    // Restore the timestamps
+                    restore_timestamps(output_file, in_st);
+
+                    // Notify the user
+                    if (!m_quiet) {
+                        if (m_verbose) {
+                            boost::unique_lock<boost::mutex> lock(m_mutex);
+                            std::cout << "`" << p.string() << "' -> `" << output_file.string() << "'" << std::endl;
+                        }
+                        else {
+                            boost::unique_lock<boost::mutex> lock(m_mutex);
+                            if (static_cast<Codec *>(decoder) == static_cast<Codec *>(m_encoder))
+                                std::cout << "Re-encoded `";
+                            else
+                                std::cout << "Transcoded `";
+                            std::cout << output_file.filename().string() << "'" << std::endl;
+                        }
+                    }
+                    break;
+                }
+                case EXIT_FAILURE: {
+                    // Output the error message from the file
+                    boost::unique_lock<boost::mutex> lock(m_mutex);
+                    std::ifstream err_in(errors_file);
+                    if (err_in.is_open()) {
+                        std::string line;
+                        while (getline(err_in, line))
+                            std::cerr << line << std::endl;
+                        err_in.close();
+                        unlink(errors_file);
+                    }
+                    else {
+                        std::cerr << PROGRAM_NAME ": unable to open the errors file" << std::endl;
+                    }
+                    break;
+                }
+                default: {
+                    boost::unique_lock<boost::mutex> lock(m_mutex);
+                    std::cerr << PROGRAM_NAME ": the forked process exited with an unknown return code" << std::endl;
+                    break;
+                }
+            }
+        }
+        return;
+    }
+
     // Open the output file
     int outfd = open(output_file.c_str(), O_WRONLY | O_CREAT | O_TRUNC, in_st.st_mode);
     if (outfd == -1) {
-        boost::unique_lock<boost::mutex> lock(m_mutex);
-        std::cerr << PROGRAM_NAME ": unable to open `" << output_file.string() << "' for writing" << std::endl;
-        return;
+        std::ofstream err_out(errors_file);
+        err_out << PROGRAM_NAME ": unable to open `" << output_file.string() << "' for writing" << std::endl;
+        exit(EXIT_FAILURE);
     }
 
     // Create the pipeline
@@ -378,45 +458,23 @@ void Walker::parallel_transcode(boost::shared_ptr<work_unit_t> work)
     if (status != 0) {
         char *pipeline_str = pipeline_tostring(pl);
         {
-            boost::unique_lock<boost::mutex> lock(m_mutex);
-            std::cerr << PROGRAM_NAME ": failed to transcode `" << p.string() << "'" << std::endl;
-            std::cerr << "The transcoding pipeline was `" << pipeline_str << "'" << std::endl;
+            std::ofstream err_out(errors_file);
+            err_out << PROGRAM_NAME ": failed to transcode `" << p.string() << "'" << std::endl;
+            err_out << "The transcoding pipeline was `" << pipeline_str << "'" << std::endl;
         }
         free(pipeline_str);
         pipeline_free(pl);
         close(outfd);
         unlink(output_file.c_str());
-        return;
+        exit(EXIT_FAILURE);
     }
 
     // Free the pipeline
     pipeline_free(pl);
     close(outfd);
 
-    // Transfer the tags
-    TagLib::FileRef in_tags(p.c_str());
-    TagLib::FileRef out_tags(output_file.c_str());
-    TagLib::Tag::duplicate(in_tags.tag(), out_tags.tag());
-    out_tags.save();
-
-    // Restore the timestamps
-    restore_timestamps(output_file, in_st);
-
-    // Notify the user
-    if (!m_quiet) {
-        if (m_verbose) {
-            boost::unique_lock<boost::mutex> lock(m_mutex);
-            std::cout << "`" << p.string() << "' -> `" << output_file.string() << "'" << std::endl;
-        }
-        else {
-            boost::unique_lock<boost::mutex> lock(m_mutex);
-            if (static_cast<Codec *>(decoder) == static_cast<Codec *>(m_encoder))
-                std::cout << "Re-encoded `";
-            else
-                std::cout << "Transcoded `";
-            std::cout << output_file.filename().string() << "'" << std::endl;
-        }
-    }
+    // Return successfully
+    exit(EXIT_SUCCESS);
 }
 
 void Walker::worker_thread()
