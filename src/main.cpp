@@ -45,10 +45,10 @@ int main(int argc, char **argv)
 {
     struct option long_options[] = {
         {"dont-copy-others", no_argument, NULL, 'C'},
-        {"dont-recurse", no_argument, NULL, 'R'},
         {"flac-option", required_argument, NULL, 'F'},
         {"lame-option", required_argument, NULL, 'L'},
         {"renaming-filter", required_argument, NULL, 'N'},
+        {"dont-recurse", no_argument, NULL, 'R'},
         {"vorbis-option", required_argument, NULL, 'V'},
         {"encoder", required_argument, NULL, 'e' },
         {"help", no_argument, NULL, 'h'},
@@ -94,13 +94,13 @@ int main(int argc, char **argv)
                 print_usage(std::cout);
                 return EXIT_SUCCESS;
             case 'o':
-                if (!strcpy(optarg, "auto")) {
+                if (!strcmp(optarg, "auto")) {
                     walker.set_overwrite_mode(Walker::OverwriteAuto);
                 }
-                else if (!strcpy(optarg, "always")) {
+                else if (!strcmp(optarg, "always")) {
                     walker.set_overwrite_mode(Walker::OverwriteAlways);
                 }
-                else if (!strcpy(optarg, "never")) {
+                else if (!strcmp(optarg, "never")) {
                     walker.set_overwrite_mode(Walker::OverwriteNever);
                 }
                 else {
