@@ -24,6 +24,9 @@ Set the renaming filter to \fIfilter\fR, which must be one of: \fIconservative\f
 .B \-R\fR/\fB\-\-dont\-recurse
 Don't recurse into input directories
 .TP
+.B \-T\fR/\fB\-\-dont\-transcode \fIext
+Don't try to transcode files with the \fIext\fR extension
+.TP
 .B \-V\fR/\fB\-\-vorbis\-option \fIoption
 Add \fIoption\fR to the list of command line arguments specified for the Ogg Vorbis encoder (oggenc)
 .TP
@@ -75,6 +78,12 @@ Typical usage scenario, synchronizing audio files with a device that can only ha
 
 .nf
 $ synconv \-L\-V2 \-L\-h \-t4 \-Nconservative /music/ /media/my_device/music
+.fi
+
+Similar scenario, but preferring Ogg Vorbis. If the files are in MP3 format, don't attempt to transcode:
+
+.nf
+$ synconv \-e vorbis \-Tmp3 \-t4 \-Nconservative /music/ /media/my_device/music
 .fi
 
 Transcoding files to low\-quality Ogg Vorbis, re\-encoding existing files. Never overwriting existing files. Assuming a dual\-core computer is being used, 2 worker threads will be launched:

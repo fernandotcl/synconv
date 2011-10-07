@@ -113,6 +113,16 @@ void Walker::apply_renaming_filter(std::wstring &path_component)
         path_component = m_renaming_filter->filter(path_component);
 }
 
+void Walker::add_dont_transcode(const std::string &ext)
+{
+    if (ext.size() > 0) {
+        std::string extension = boost::to_lower_copy(ext);
+        if (extension[0] != '.')
+            extension = '.' + extension;
+        m_dont_transcode_exts.insert(extension);
+    }
+}
+
 bool Walker::check_output_dir(const fs::path &output_dir)
 {
     m_output_dir_created = false;
@@ -252,12 +262,14 @@ void Walker::visit_file(const fs::path &p)
 
     // Select the codec based on the extension
     Decoder *decoder = NULL;
-    if (ext == ".flac")
-        decoder = &m_flac_codec;
-    else if (ext == ".mp3")
-        decoder = &m_lame_codec;
-    else if (ext == ".ogg" || ext == ".oga")
-        decoder = &m_vorbis_codec;
+    if (m_dont_transcode_exts.find(ext) == m_dont_transcode_exts.end()) {
+        if (ext == ".flac")
+            decoder = &m_flac_codec;
+        else if (ext == ".mp3")
+            decoder = &m_lame_codec;
+        else if (ext == ".ogg" || ext == ".oga")
+            decoder = &m_vorbis_codec;
+    }
 
     // Create the output filename
     std::wstring suffix;

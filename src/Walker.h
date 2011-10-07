@@ -29,6 +29,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <sys/stat.h>
+#include <set>
 #include <vector>
 
 #include "FlacCodec.h"
@@ -63,6 +64,8 @@ class Walker
         void add_flac_option(const std::string &option) { m_flac_codec.add_extra_option(option); }
         void add_lame_option(const std::string &option) { m_lame_codec.add_extra_option(option); }
         void add_vorbis_option(const std::string &option) { m_vorbis_codec.add_extra_option(option); }
+
+        void add_dont_transcode(const std::string &ext);
 
         void walk(const std::vector<boost::filesystem::path> &input_paths,
                 boost::filesystem::path &output_dir);
@@ -103,6 +106,8 @@ class Walker
         std::wstring m_encoder_ext;
 
         boost::scoped_ptr<RenamingFilter> m_renaming_filter;
+
+        std::set<std::string> m_dont_transcode_exts;
 
         unsigned int m_num_workers;
         boost::mutex m_mutex, m_workers_mutex;
