@@ -100,6 +100,8 @@ Transcoding files to low\-quality Ogg Vorbis, re\-encoding existing files. Never
 .nf
 $ synconv \-e vorbis \-V\-q1 \-t2 \-onever /path/to/foo /path/to/bar
 .fi
+.SH BUGS
+If you use more than one thread for transcoding, you might see messages indicating that synconv has entered a different directory before all files have been transcoded in the previous directory. This can be misleading, but it's perfectly normal as sysconv will continue entering other directories as transcoding in visited directories is still in progress.
 .SH SEE ALSO
 .B flac\fR(1),
 .B lame\fR(1),
