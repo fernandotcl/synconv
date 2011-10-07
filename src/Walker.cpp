@@ -288,9 +288,12 @@ void Walker::visit_file(const fs::path &p)
             decoder = &m_vorbis_codec;
     }
 
+    // Check if we're transcoding or not
+    bool transcoding = decoder && (static_cast<Codec *>(decoder) != static_cast<Codec *>(m_encoder) || m_reencode);
+
     // Create the output filename
     std::wstring suffix;
-    if (decoder) {
+    if (transcoding) {
         suffix = p.stem().string<std::wstring>();
         if (m_forced_ext.empty())
             suffix += m_encoder_ext;
@@ -334,7 +337,7 @@ void Walker::visit_file(const fs::path &p)
         }
     }
 
-    if (!decoder || (static_cast<Codec *>(decoder) == static_cast<Codec *>(m_encoder) && !m_reencode)) {
+    if (!transcoding) {
         if (m_copy_other) {
             // We're copying, create the output directory
             if (!create_output_dir())
