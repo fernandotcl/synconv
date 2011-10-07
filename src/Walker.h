@@ -66,6 +66,7 @@ class Walker
         void add_vorbis_option(const std::string &option) { m_vorbis_codec.add_extra_option(option); }
 
         void add_dont_transcode(const std::string &ext);
+        void set_output_extension(const std::string &ext);
 
         void walk(const std::vector<boost::filesystem::path> &input_paths,
                 boost::filesystem::path &output_dir);
@@ -108,6 +109,7 @@ class Walker
         boost::scoped_ptr<RenamingFilter> m_renaming_filter;
 
         std::set<std::string> m_dont_transcode_exts;
+        std::wstring m_forced_ext;
 
         unsigned int m_num_workers;
         boost::mutex m_mutex, m_workers_mutex;

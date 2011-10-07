@@ -21,6 +21,9 @@ Add \fIoption\fR to the list of command line arguments specified for the LAME en
 .B \-N\fR/\fB\-\-renaming\-filter \fIfilter
 Set the renaming filter to \fIfilter\fR, which must be one of: \fIconservative\fR (a conservative filter, recommended when working with FAT32 filesystems) or \fInone\fR (don't use a renaming filter, default if not specified)
 .TP
+.B \-O\fR/\fB\-\-output\-extension \fIext
+Use \fIext\fR as the output extension instead of the default extension for the encoder
+.TP
 .B \-R\fR/\fB\-\-dont\-recurse
 Don't recurse into input directories
 .TP
@@ -84,6 +87,12 @@ Similar scenario, but preferring Ogg Vorbis. If the files are in MP3 format, don
 
 .nf
 $ synconv \-e vorbis \-Tmp3 \-t4 \-Nconservative /music/ /media/my_device/music
+.fi
+
+Same scenario, but if you prefer to use the .oga extension for Ogg Vorbis:
+
+.nf
+$ synconv \-e vorbis \-Ooga \-Tmp3 \-t4 \-Nconservative /music/ /media/my_device/music
 .fi
 
 Transcoding files to low\-quality Ogg Vorbis, re\-encoding existing files. Never overwriting existing files. Assuming a dual\-core computer is being used, 2 worker threads will be launched:

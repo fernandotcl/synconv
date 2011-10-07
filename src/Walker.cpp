@@ -123,6 +123,14 @@ void Walker::add_dont_transcode(const std::string &ext)
     }
 }
 
+void Walker::set_output_extension(const std::string &ext)
+{
+    m_forced_ext.assign(ext.size(), L' ');
+    std::copy(ext.begin(), ext.end(), m_forced_ext.begin());
+    if (m_forced_ext[0] != L'.')
+        m_forced_ext = L'.' + m_forced_ext;
+}
+
 bool Walker::check_output_dir(const fs::path &output_dir)
 {
     m_output_dir_created = false;
@@ -273,10 +281,16 @@ void Walker::visit_file(const fs::path &p)
 
     // Create the output filename
     std::wstring suffix;
-    if (decoder)
-        suffix = p.stem().string<std::wstring>() + m_encoder_ext;
-    else
+    if (decoder) {
+        suffix = p.stem().string<std::wstring>();
+        if (m_forced_ext.empty())
+            suffix += m_encoder_ext;
+        else
+            suffix += m_forced_ext;
+    }
+    else {
         suffix = p.filename().string<std::wstring>();
+    }
     apply_renaming_filter(suffix);
     fs::path output_file = m_output_dir / suffix;
 

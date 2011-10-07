@@ -48,6 +48,7 @@ int main(int argc, char **argv)
         {"flac-option", required_argument, NULL, 'F'},
         {"lame-option", required_argument, NULL, 'L'},
         {"renaming-filter", required_argument, NULL, 'N'},
+        {"output-extension", required_argument, NULL, 'O'},
         {"dont-recurse", no_argument, NULL, 'R'},
         {"dont-transcode", required_argument, NULL, 'T'},
         {"vorbis-option", required_argument, NULL, 'V'},
@@ -66,7 +67,7 @@ int main(int argc, char **argv)
 
     // Parse the command line options
     int opt;
-    while ((opt = getopt_long(argc, argv, "CF:L:N:RT:V:e:ho:qrt:v", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "CF:L:O:N:RT:V:e:ho:qrt:v", long_options, NULL)) != -1) {
         switch (opt) {
             case 'C':
                 walker.set_copy_other(false);
@@ -80,6 +81,9 @@ int main(int argc, char **argv)
             case 'N':
                 if (!walker.set_renaming_filter(optarg))
                     return EXIT_FAILURE;
+                break;
+            case 'O':
+                walker.set_output_extension(optarg);
                 break;
             case 'R':
                 walker.set_recursive(false);
