@@ -22,7 +22,7 @@ A brief list of features:
 * Audio tags are copied from the original file to the transcoded file
 * Support for re-encoding files and skipping files that can't be transcoded
 * Timestamps are checked to prevent duplicated work
-* Renaming filters make it easy to work with filesystems such as FAT
+* Renaming filters make it easy to work with filesystems such as FAT32
 
 References:
 
