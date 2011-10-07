@@ -29,6 +29,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <sys/stat.h>
+#include <list>
 #include <set>
 #include <vector>
 
@@ -55,6 +56,7 @@ class Walker
         void set_verbose(bool verbose) { m_verbose = verbose; }
         void set_quiet(bool quiet) { m_quiet = quiet; }
         void set_num_workers(unsigned int num) { m_num_workers = num; }
+        void set_delete(bool del) { m_delete = del; }
 
         bool set_encoder(const std::string &name);
         bool has_encoder() const { return m_encoder != NULL; }
@@ -81,6 +83,9 @@ class Walker
         void visit_file(const boost::filesystem::path &p);
         bool visit_directory(const boost::filesystem::path &p);
 
+        void visit_file_deletion(const boost::filesystem::path &p);
+        bool visit_directory_deletion(const boost::filesystem::path &p);
+
         bool check_output_dir(const boost::filesystem::path &output_dir);
         bool create_output_dir();
 
@@ -90,6 +95,8 @@ class Walker
         void worker_thread();
 
         void apply_renaming_filter(std::wstring &path_component);
+
+        void add_dont_delete_file(const boost::filesystem::path &p);
 
         OverwriteMode m_overwrite;
         bool m_recursive, m_copy_other, m_reencode;
@@ -110,6 +117,10 @@ class Walker
 
         std::set<std::string> m_dont_transcode_exts;
         std::wstring m_forced_ext;
+
+        bool m_delete;
+        std::set<boost::filesystem::path> m_dont_delete_paths;
+        std::list<boost::filesystem::path> m_paths_to_delete;
 
         unsigned int m_num_workers;
         boost::mutex m_mutex, m_workers_mutex;

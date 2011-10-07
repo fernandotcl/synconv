@@ -52,6 +52,7 @@ int main(int argc, char **argv)
         {"dont-recurse", no_argument, NULL, 'R'},
         {"dont-transcode", required_argument, NULL, 'T'},
         {"vorbis-option", required_argument, NULL, 'V'},
+        {"delete", no_argument, NULL, 'd' },
         {"encoder", required_argument, NULL, 'e' },
         {"help", no_argument, NULL, 'h'},
         {"overwrite-mode", required_argument, NULL, 'o'},
@@ -67,7 +68,7 @@ int main(int argc, char **argv)
 
     // Parse the command line options
     int opt;
-    while ((opt = getopt_long(argc, argv, "CF:L:O:N:RT:V:e:ho:qrt:v", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "CF:L:O:N:RT:V:de:ho:qrt:v", long_options, NULL)) != -1) {
         switch (opt) {
             case 'C':
                 walker.set_copy_other(false);
@@ -93,6 +94,9 @@ int main(int argc, char **argv)
                 break;
             case 'V':
                 walker.add_vorbis_option(optarg);
+                break;
+            case 'd':
+                walker.set_delete(true);
                 break;
             case 'e':
                 if (!walker.set_encoder(optarg))

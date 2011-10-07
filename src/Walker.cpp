@@ -64,9 +64,30 @@ static inline void walk(const fs::path &p, FileVisitor f, DirectoryVisitor d)
     }
 }
 
+static bool compare_paths_for_deletion(const fs::path &lhs, const fs::path &rhs)
+{
+    std::string lhs_s(lhs.string());
+    std::string rhs_s(rhs.string());
+    if (lhs_s.size() > rhs_s.size()) {
+        if (lhs_s.substr(0, rhs_s.size()) == rhs_s)
+            return true;
+        else
+            return lhs < rhs;
+    }
+    else if (rhs_s.size() > lhs_s.size()) {
+        if (rhs_s.substr(0, lhs_s.size()) == lhs_s)
+            return false;
+        else
+            return lhs < rhs;
+    }
+    else {
+        return lhs < rhs;
+    }
+}
+
 Walker::Walker()
-    : m_overwrite(OverwriteAuto), m_recursive(true),m_copy_other(true),
-      m_verbose(false), m_quiet(false), m_encoder(NULL),
+    : m_overwrite(OverwriteAuto), m_recursive(true), m_copy_other(true),
+      m_verbose(false), m_quiet(false), m_encoder(NULL), m_delete(false),
       m_num_workers(1), m_workers_should_quit(false)
 {
 }
@@ -177,6 +198,29 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
                 boost::unique_lock<boost::mutex> lock(m_mutex);
                 std::cerr << PROGRAM_NAME ": " << e.what() << std::endl;
             }
+
+            if (m_delete) {
+                // Walk the output hierarchy, accumulate the paths we didn't touch
+                try {
+                    ::walk(m_base_output_dir, boost::bind(&Walker::visit_file_deletion, this, _1),
+                            boost::bind(&Walker::visit_directory_deletion, this, _1));
+                }
+                catch (std::exception &e) {
+                    boost::unique_lock<boost::mutex> lock(m_mutex);
+                    std::cerr << PROGRAM_NAME ": " << e.what() << std::endl;
+                }
+                m_dont_delete_paths.clear();
+
+                // Sort the paths so we can delete them, then delete them
+                m_paths_to_delete.sort(compare_paths_for_deletion);
+                BOOST_FOREACH(const fs::path &p, m_paths_to_delete) {
+                    if (m_verbose)
+                        std::cout << PROGRAM_NAME ": deleted `" << p.string() << "'" << std::endl;
+                    else
+                        std::cout << "Deleted `" << p.filename().string() << "'" << std::endl;
+                    fs::remove(p);
+                }
+            }
         }
         else if (fs::is_regular_file(p)) {
             // Just convert the single file
@@ -255,7 +299,7 @@ bool Walker::create_output_dir()
     }
 }
 
-bool Walker::restore_timestamps(const boost::filesystem::path &p, const struct stat &st)
+bool Walker::restore_timestamps(const fs::path &p, const struct stat &st)
 {
     struct utimbuf ut;
     ut.actime = st.st_atime;
@@ -320,6 +364,7 @@ void Walker::visit_file(const fs::path &p)
         if (!stat(output_file.c_str(), &out_st)) {
             // If we're never overwriting it, nothing else to do
             if (m_overwrite == OverwriteNever) {
+                add_dont_delete_file(output_file);
                 if (m_verbose) {
                     boost::unique_lock<boost::mutex> lock(m_mutex);
                     std::cout << PROGRAM_NAME ": skipping `" << p.string() << "' (not overwriting)" << std::endl;
@@ -328,9 +373,10 @@ void Walker::visit_file(const fs::path &p)
             }
             // m_overwrite == OverwriteAuto, check timestamps
             if (in_st.st_mtime <= out_st.st_mtime) {
+                add_dont_delete_file(output_file);
                 if (m_verbose) {
                     boost::unique_lock<boost::mutex> lock(m_mutex);
-                    std::cout << PROGRAM_NAME ": skipping `" << p.string() << "' (not overwriting)" << std::endl;
+                    std::cout << PROGRAM_NAME ": skipping `" << p.string() << "' (up-to-date)" << std::endl;
                 }
                 return;
             }
@@ -362,6 +408,9 @@ void Walker::visit_file(const fs::path &p)
                 else
                     std::cout << "Copied `" << output_file.filename().string() << "'" << std::endl;
             }
+
+            // Don't delete this path afterwards
+            add_dont_delete_file(output_file);
             return;
         }
         else {
@@ -377,6 +426,9 @@ void Walker::visit_file(const fs::path &p)
     // Create the output directory
     if (!create_output_dir())
         return;
+
+    // Don't delete this path afterwards
+    add_dont_delete_file(output_file);
 
     {
         // Wait until we can post this work unit
@@ -547,4 +599,25 @@ void Walker::worker_thread()
         // Work on the work item
         parallel_transcode(work);
     }
+}
+
+void Walker::add_dont_delete_file(const fs::path &p)
+{
+    if (m_delete) {
+        m_dont_delete_paths.insert(p);
+        m_dont_delete_paths.insert(p.parent_path());
+    }
+}
+
+void Walker::visit_file_deletion(const fs::path &p)
+{
+    if (m_dont_delete_paths.find(p) == m_dont_delete_paths.end())
+        m_paths_to_delete.push_back(p);
+}
+
+bool Walker::visit_directory_deletion(const fs::path &p)
+{
+    if (m_dont_delete_paths.find(p) == m_dont_delete_paths.end())
+        m_paths_to_delete.push_back(p);
+    return true;
 }
