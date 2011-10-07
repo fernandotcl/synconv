@@ -55,6 +55,7 @@ class Walker
         void set_reencode(bool reencode) { m_reencode = reencode; }
         void set_verbose(bool verbose) { m_verbose = verbose; }
         void set_quiet(bool quiet) { m_quiet = quiet; }
+        void set_dry_run(bool dry_run) { m_dry_run = dry_run; }
         void set_num_workers(unsigned int num) { m_num_workers = num; }
         void set_delete(bool del) { m_delete = del; }
 
@@ -104,7 +105,7 @@ class Walker
         boost::filesystem::path m_output_dir, m_base_output_dir, m_base_dir;
         bool m_output_dir_created, m_output_dir_error;
 
-        bool m_verbose, m_quiet;
+        bool m_verbose, m_quiet, m_dry_run;
 
         FlacCodec m_flac_codec;
         LameCodec m_lame_codec;

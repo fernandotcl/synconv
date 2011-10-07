@@ -55,6 +55,7 @@ int main(int argc, char **argv)
         {"delete", no_argument, NULL, 'd' },
         {"encoder", required_argument, NULL, 'e' },
         {"help", no_argument, NULL, 'h'},
+        {"dry-run", no_argument, NULL, 'n'},
         {"overwrite-mode", required_argument, NULL, 'o'},
         {"quiet", no_argument, NULL, 'q'},
         {"reencode", no_argument, NULL, 'r'},
@@ -68,7 +69,7 @@ int main(int argc, char **argv)
 
     // Parse the command line options
     int opt;
-    while ((opt = getopt_long(argc, argv, "CF:L:O:N:RT:V:de:ho:qrt:v", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "CF:L:O:N:RT:V:de:hno:qrt:v", long_options, NULL)) != -1) {
         switch (opt) {
             case 'C':
                 walker.set_copy_other(false);
@@ -105,6 +106,9 @@ int main(int argc, char **argv)
             case 'h':
                 print_usage(std::cout);
                 return EXIT_SUCCESS;
+            case 'n':
+                walker.set_dry_run(true);
+                break;
             case 'o':
                 if (!strcmp(optarg, "auto")) {
                     walker.set_overwrite_mode(Walker::OverwriteAuto);

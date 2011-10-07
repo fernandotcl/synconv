@@ -42,6 +42,9 @@ Set the encoder to \fIname\fR, which must be one of: \fIflac\fR (encodes into th
 .B \-h\fR/\fB\-\-help
 Display usage information and exit
 .TP
+.B \-n\fR/\fB\-\-dry\-run
+Perform a trial run with no changes made
+.TP
 .B \-o\fR/\fB\-\-overwrite\-mode \fImode
 Set the overwrite mode to \fImode\fR, which must be one of: \fIalways\fR (always overwrites existing files), \fIauto\fR (overwrites only if the output file is older than the input file, default if not specified) or \fInever\fR (never overwrites existing files)
 .TP
@@ -102,6 +105,12 @@ Transcoding files to low\-quality Ogg Vorbis, re\-encoding existing files. Never
 
 .nf
 $ synconv \-e vorbis \-V\-q1 \-t2 \-onever /path/to/foo /path/to/bar
+.fi
+
+Using the \fB\-\-delete\fR option is dangerous. Make sure you use it with the \fB\-\-dry\-run\fR option first so that you can be sure the outcome will match your expectations:
+
+.nf
+$ synconv \-d \-n /path/to/foo /path/to/bar
 .fi
 .SH BUGS
 If you use more than one thread for transcoding, you might see messages indicating that synconv has entered a different directory before all files have been transcoded in the previous directory. This can be misleading, but it's perfectly normal as sysconv will continue entering other directories as transcoding in visited directories is still in progress.

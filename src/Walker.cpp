@@ -87,7 +87,8 @@ static bool compare_paths_for_deletion(const fs::path &lhs, const fs::path &rhs)
 
 Walker::Walker()
     : m_overwrite(OverwriteAuto), m_recursive(true), m_copy_other(true),
-      m_verbose(false), m_quiet(false), m_encoder(NULL), m_delete(false),
+      m_verbose(false), m_quiet(false), m_dry_run(false),
+      m_encoder(NULL), m_delete(false),
       m_num_workers(1), m_workers_should_quit(false)
 {
 }
@@ -201,24 +202,27 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
 
             if (m_delete) {
                 // Walk the output hierarchy, accumulate the paths we didn't touch
-                try {
-                    ::walk(m_base_output_dir, boost::bind(&Walker::visit_file_deletion, this, _1),
-                            boost::bind(&Walker::visit_directory_deletion, this, _1));
-                }
-                catch (std::exception &e) {
-                    boost::unique_lock<boost::mutex> lock(m_mutex);
-                    std::cerr << PROGRAM_NAME ": " << e.what() << std::endl;
+                if (!m_dry_run || (fs::exists(m_base_output_dir) && fs::is_directory(m_base_output_dir))) {
+                    try {
+                        ::walk(m_base_output_dir, boost::bind(&Walker::visit_file_deletion, this, _1),
+                                boost::bind(&Walker::visit_directory_deletion, this, _1));
+                    }
+                    catch (std::exception &e) {
+                        boost::unique_lock<boost::mutex> lock(m_mutex);
+                        std::cerr << PROGRAM_NAME ": " << e.what() << std::endl;
+                    }
                 }
                 m_dont_delete_paths.clear();
 
                 // Sort the paths so we can delete them, then delete them
                 m_paths_to_delete.sort(compare_paths_for_deletion);
                 BOOST_FOREACH(const fs::path &p, m_paths_to_delete) {
+                    if (!m_dry_run)
+                        fs::remove(p);
                     if (m_verbose)
                         std::cout << PROGRAM_NAME ": deleted `" << p.string() << "'" << std::endl;
                     else
                         std::cout << "Deleted `" << p.filename().string() << "'" << std::endl;
-                    fs::remove(p);
                 }
             }
         }
@@ -246,6 +250,10 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
     m_workers_cond.notify_all();
     BOOST_FOREACH(boost::shared_ptr<boost::thread> worker, m_workers)
         worker->join();
+
+    // Inform the user if we ran in dry run mode
+    if (m_dry_run)
+        std::cout << PROGRAM_NAME ": finished running in dry-run mode, no actual changes made" << std::endl;
 }
 
 bool Walker::visit_directory(const fs::path &p)
@@ -272,8 +280,8 @@ bool Walker::visit_directory(const fs::path &p)
 
 bool Walker::create_output_dir()
 {
-    // All good, we already have an output dir
-    if (m_output_dir_created)
+    // All good, we already have an output dir or if we're in dry run mode
+    if (m_output_dir_created || m_dry_run)
         return true;
 
     // Check if we need to create it
@@ -389,16 +397,18 @@ void Walker::visit_file(const fs::path &p)
             if (!create_output_dir())
                 return;
 
-            // Copy the file
-            boost::system::error_code ec;
-            fs::copy_file(p, output_file, fs::copy_option::overwrite_if_exists, ec);
-            if (ec) {
-                boost::unique_lock<boost::mutex> lock(m_mutex);
-                std::cerr << PROGRAM_NAME ": failed to copy `" << p.string() << "': " << ec.message() << std::endl;
-            }
+            if (!m_dry_run) {
+                // Copy the file
+                boost::system::error_code ec;
+                fs::copy_file(p, output_file, fs::copy_option::overwrite_if_exists, ec);
+                if (ec) {
+                    boost::unique_lock<boost::mutex> lock(m_mutex);
+                    std::cerr << PROGRAM_NAME ": failed to copy `" << p.string() << "': " << ec.message() << std::endl;
+                }
 
-            // Restore the timestamps
-            restore_timestamps(output_file, in_st);
+                // Restore the timestamps
+                restore_timestamps(output_file, in_st);
+            }
 
             // Notify the user
             if (!m_quiet) {
@@ -480,14 +490,16 @@ void Walker::parallel_transcode(boost::shared_ptr<work_unit_t> work)
             int rc = WEXITSTATUS(status);
             switch (rc) {
                 case EXIT_SUCCESS: {
-                    // Transfer the tags
-                    TagLib::FileRef in_tags(p.c_str());
-                    TagLib::FileRef out_tags(output_file.c_str());
-                    TagLib::Tag::duplicate(in_tags.tag(), out_tags.tag());
-                    out_tags.save();
+                    if (!m_dry_run) {
+                        // Transfer the tags
+                        TagLib::FileRef in_tags(p.c_str());
+                        TagLib::FileRef out_tags(output_file.c_str());
+                        TagLib::Tag::duplicate(in_tags.tag(), out_tags.tag());
+                        out_tags.save();
 
-                    // Restore the timestamps
-                    restore_timestamps(output_file, in_st);
+                        // Restore the timestamps
+                        restore_timestamps(output_file, in_st);
+                    }
 
                     // Notify the user
                     if (!m_quiet) {
@@ -531,6 +543,10 @@ void Walker::parallel_transcode(boost::shared_ptr<work_unit_t> work)
         }
         return;
     }
+
+    // Nothing to do in dry run mode
+    if (m_dry_run)
+        exit(EXIT_SUCCESS);
 
     // Open the output file
     int outfd = open(output_file.c_str(), O_WRONLY | O_CREAT | O_TRUNC, in_st.st_mode);
