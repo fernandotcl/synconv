@@ -232,6 +232,15 @@ bool Walker::create_output_dir()
     if (m_output_dir_created)
         return true;
 
+    // Check if we need to create it
+    if (!check_output_dir(m_output_dir))
+        return false;
+
+    // We need to check again if we have the output dir, as
+    // check_output_dir will look in the filesystem
+    if (m_output_dir_created)
+        return true;
+
     // Try to create it
     boost::system::error_code ec;
     if (fs::create_directories(m_output_dir, ec)) {
@@ -325,18 +334,24 @@ void Walker::visit_file(const fs::path &p)
         }
     }
 
-    // Either copy or skip the file if we don't have a decoder for it
     if (!decoder || (static_cast<Codec *>(decoder) == static_cast<Codec *>(m_encoder) && !m_reencode)) {
         if (m_copy_other) {
+            // We're copying, create the output directory
             if (!create_output_dir())
                 return;
+
+            // Copy the file
             boost::system::error_code ec;
             fs::copy_file(p, output_file, fs::copy_option::overwrite_if_exists, ec);
             if (ec) {
                 boost::unique_lock<boost::mutex> lock(m_mutex);
                 std::cerr << PROGRAM_NAME ": failed to copy `" << p.string() << "': " << ec.message() << std::endl;
             }
+
+            // Restore the timestamps
             restore_timestamps(output_file, in_st);
+
+            // Notify the user
             if (!m_quiet) {
                 boost::unique_lock<boost::mutex> lock(m_mutex);
                 if (m_verbose)
@@ -347,6 +362,7 @@ void Walker::visit_file(const fs::path &p)
             return;
         }
         else {
+            // Just skip this file, notify the user
             if (m_verbose) {
                 boost::unique_lock<boost::mutex> lock(m_mutex);
                 std::cout << PROGRAM_NAME ": skipping `" << p.string() << "'" << std::endl;
