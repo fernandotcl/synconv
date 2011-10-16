@@ -184,8 +184,11 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
             // or if the output directory doesn't exist, copy its contents instead
             // (like the Unix cp command does)
             m_output_dir = output_dir;
-            if (!boost::ends_with(p.string(), "/") && fs::exists(output_dir))
-                m_output_dir /= p.filename();
+            if (!boost::ends_with(p.string(), "/") && fs::exists(output_dir)) {
+                std::wstring newdir(p.filename().string<std::wstring>());
+                apply_renaming_filter(newdir);
+                m_output_dir /= newdir;
+            }
             if (!check_output_dir(output_dir))
                 continue;
 
