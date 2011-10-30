@@ -222,6 +222,7 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
                 BOOST_FOREACH(const fs::path &p, m_paths_to_delete) {
                     if (!m_dry_run)
                         fs::remove(p);
+                    boost::unique_lock<boost::mutex> lock(m_mutex);
                     if (m_verbose)
                         std::cout << PROGRAM_NAME ": deleted `" << p.string() << "'" << std::endl;
                     else
