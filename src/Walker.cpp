@@ -220,13 +220,23 @@ void Walker::walk(const std::vector<fs::path> &input_paths, fs::path &output_dir
                 // Sort the paths so we can delete them, then delete them
                 m_paths_to_delete.sort(compare_paths_for_deletion);
                 BOOST_FOREACH(const fs::path &p, m_paths_to_delete) {
-                    if (!m_dry_run)
-                        fs::remove(p);
-                    boost::unique_lock<boost::mutex> lock(m_mutex);
-                    if (m_verbose)
-                        std::cout << PROGRAM_NAME ": deleted `" << p.string() << "'" << std::endl;
-                    else
-                        std::cout << "Deleted `" << p.filename().string() << "'" << std::endl;
+                    bool delete_error = false;
+                    if (!m_dry_run) {
+                        boost::system::error_code ec;
+                        fs::remove(p, ec);
+                        if (ec) {
+                            boost::unique_lock<boost::mutex> lock(m_mutex);
+                            std::cerr << PROGRAM_NAME ": failed to delete `" << p.string() << "': " << ec.message() << std::endl;
+                            delete_error = true;
+                        }
+                    }
+                    if (!delete_error) {
+                        boost::unique_lock<boost::mutex> lock(m_mutex);
+                        if (m_verbose)
+                            std::cout << PROGRAM_NAME ": deleted `" << p.string() << "'" << std::endl;
+                        else
+                            std::cout << "Deleted `" << p.filename().string() << "'" << std::endl;
+                    }
                 }
             }
         }
