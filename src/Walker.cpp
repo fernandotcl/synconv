@@ -86,7 +86,8 @@ static bool compare_paths_for_deletion(const fs::path &lhs, const fs::path &rhs)
 }
 
 Walker::Walker()
-    : m_overwrite(OverwriteAuto), m_recursive(true), m_copy_other(true),
+    : m_overwrite(OverwriteAuto), m_recursive(true),
+      m_copy_other(true), m_reencode(false),
       m_verbose(false), m_quiet(false), m_dry_run(false),
       m_encoder(NULL), m_delete(false),
       m_num_workers(1), m_workers_should_quit(false)
