@@ -283,10 +283,26 @@ bool Walker::visit_directory(const fs::path &p)
     if (!m_recursive)
         return false;
 
-    // Calculate the next output dir
-    std::wstring diff(p.string<std::wstring>().substr(m_base_dir.string<std::wstring>().size() + 1));
-    apply_renaming_filter(diff);
-    m_output_dir = m_base_output_dir / diff;
+    // We now need to define what the next output dir should be. To do
+    // that, we take a relative path from the base dir, and append that
+    // path to the base output dir. Note that the base dir (base_dir) is
+    // a prefix of the current dir (p). So, in order to get a relative
+    // path, we can just remove the common prefix from the current dir.
+
+    // Calculate the last position in common between the current dir and
+    // the base dir, taking into account that the base dir may have a dir
+    // separator appended to it
+    const std::wstring &base_dir = m_base_dir.string<std::wstring>();
+    std::wstring::size_type pos = base_dir.size();
+    if (boost::ends_with(base_dir, L"/"))
+        --pos;
+
+    // Use that to calculate suffix, then apply the renaming filter
+    std::wstring suffix(p.string<std::wstring>().substr(pos));
+    apply_renaming_filter(suffix);
+
+    // Now we can calculate the output dir
+    m_output_dir = m_base_output_dir / suffix;
     m_output_dir = fs::absolute(m_output_dir);
     m_output_dir_created = false;
     m_output_dir_error = false;
