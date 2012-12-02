@@ -18,6 +18,7 @@ set(SYNCONV_SOURCES
     src/Walker.cpp)
 
 set(SYNCONV_HEADERS
+    src/AlacEncoder.h
     src/Codec.h
     src/config.h
     src/ConservativeRenamingFilter.h

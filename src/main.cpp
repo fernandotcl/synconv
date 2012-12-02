@@ -69,8 +69,11 @@ int main(int argc, char **argv)
 
     // Parse the command line options
     int opt;
-    while ((opt = getopt_long(argc, argv, "CF:L:O:N:RT:V:de:hno:qrt:v", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "ACF:L:O:N:RT:V:de:hno:qrt:v", long_options, NULL)) != -1) {
         switch (opt) {
+            case 'A':
+                walker.add_afconvert_option(optarg);
+                break;
             case 'C':
                 walker.set_copy_other(false);
                 break;

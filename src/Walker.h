@@ -29,10 +29,16 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <list>
 #include <set>
 #include <vector>
 
+extern "C" {
+#include <pipeline.h>
+}
+
+#include "AlacEncoder.h"
 #include "FlacCodec.h"
 #include "LameCodec.h"
 #include "RenamingFilter.h"
@@ -64,6 +70,7 @@ class Walker
 
         bool set_renaming_filter(const std::string &filter);
 
+        void add_afconvert_option(const std::string &option) { m_alac_encoder.add_extra_option(option); }
         void add_flac_option(const std::string &option) { m_flac_codec.add_extra_option(option); }
         void add_lame_option(const std::string &option) { m_lame_codec.add_extra_option(option); }
         void add_vorbis_option(const std::string &option) { m_vorbis_codec.add_extra_option(option); }
@@ -90,6 +97,11 @@ class Walker
         bool check_output_dir(const boost::filesystem::path &output_dir);
         bool create_output_dir();
 
+        int try_open_output_file(const boost::filesystem::path &p,
+                                 mode_t mode, const char *errors_file);
+        bool run_and_free_pipeline(const boost::filesystem::path &p,
+                                   pipeline *pl, const char *errors_file);
+
         bool restore_timestamps(const boost::filesystem::path &p, const struct stat &st);
 
         void parallel_transcode(boost::shared_ptr<work_unit_t> work);
@@ -107,6 +119,7 @@ class Walker
 
         bool m_verbose, m_quiet, m_dry_run;
 
+        AlacEncoder m_alac_encoder;
         FlacCodec m_flac_codec;
         LameCodec m_lame_codec;
         VorbisCodec m_vorbis_codec;

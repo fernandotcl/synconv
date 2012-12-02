@@ -1,7 +1,7 @@
 /*
  * This file is part of synconv.
  *
- * © 2011 Fernando Tarlá Cardoso Lemos
+ * © 2011-2012 Fernando Tarlá Cardoso Lemos
  *
  * synconv is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <sys/wait.h>
 #include <taglib/fileref.h>
 #include <taglib/tag.h>
@@ -96,7 +95,11 @@ Walker::Walker()
 
 bool Walker::set_encoder(const std::string &name)
 {
-    if (name == "flac") {
+    if (name == "alac") {
+        m_encoder = &m_alac_encoder;
+        m_encoder_ext = L".m4a";
+    }
+    else if (name == "flac") {
         m_encoder = &m_flac_codec;
         m_encoder_ext = L".flac";
     }
@@ -579,26 +582,126 @@ void Walker::parallel_transcode(boost::shared_ptr<work_unit_t> work)
     if (m_dry_run)
         exit(EXIT_SUCCESS);
 
-    // Open the output file
-    int outfd = open(output_file.c_str(), O_WRONLY | O_CREAT | O_TRUNC, in_st.st_mode);
-    if (outfd == -1) {
-        std::ofstream err_out(errors_file);
-        err_out << PROGRAM_NAME ": unable to open `" << output_file.string() << "' for writing" << std::endl;
-        exit(EXIT_FAILURE);
+    // If the encoder can't read from stdin, we have
+    // to create to output to a temporary file first
+    fs::path tmp_file;
+    if (!m_encoder->encodes_from_stdin()) {
+        // Open the temporary file
+        tmp_file = output_file.string() + ".wav";
+        int tmpfd = try_open_output_file(tmp_file, in_st.st_mode, errors_file);
+        if (tmpfd == -1)
+            exit(EXIT_FAILURE);
+
+        // Create a pipeline
+        pipeline *pl = pipeline_new();
+
+        // Add the decoder
+        pipeline_want_infile(pl, p.string().c_str());
+        decoder->enter_decoder_pipeline(pl);
+
+        // Write directly to the temporary file
+        pipeline_want_out(pl, tmpfd);
+
+        // Run the pipeline and get rid of
+        // the temporary file if that fails
+        if (!run_and_free_pipeline(p, pl, errors_file)) {
+            close(tmpfd);
+            unlink(tmp_file.c_str());
+            exit(EXIT_FAILURE);
+        }
+
+        // Done with tmpfd
+        close(tmpfd);
+    }
+
+    // Open the encoder output file
+    int outfd;
+    if (m_encoder->encodes_to_stdout()) {
+        outfd = try_open_output_file(output_file, in_st.st_mode, errors_file);
+        if (outfd == -1) {
+            // Unlink the temporary file
+            if (!m_encoder->encodes_from_stdin())
+                unlink(tmp_file.c_str());
+
+            // Exit with error
+            exit(EXIT_FAILURE);
+        }
     }
 
     // Create the pipeline
     pipeline *pl = pipeline_new();
-    pipeline_want_infile(pl, p.string().c_str());
-    decoder->enter_decoder_pipeline(pl);
-    m_encoder->enter_encoder_pipeline(pl);
-    pipeline_want_out(pl, outfd);
 
+    if (m_encoder->encodes_from_stdin()) {
+        // If the encoder accepts input from stdin,
+        // we can simply plug in the decoder
+        pipeline_want_infile(pl, p.string().c_str());
+        decoder->enter_decoder_pipeline(pl);
+    }
+    else {
+        // Otherwise we'll let the encoder open
+        // the temporary file instead
+        m_encoder->set_encoder_input_file(tmp_file.c_str());
+    }
+
+    if (m_encoder->encodes_to_stdout()) {
+        // Add the encoder (order matters)
+        m_encoder->enter_encoder_pipeline(pl);
+
+        // If the encoder accepts output to stdout,
+        // we can simply pipe it to the output fd
+        pipeline_want_out(pl, outfd);
+    }
+    else {
+        // Otherwise we'll let the encoder open
+        // the output file instead
+        m_encoder->set_encoder_output_file(output_file.c_str());
+
+        // Add the encoder (order matters)
+        m_encoder->enter_encoder_pipeline(pl);
+    }
+
+    // Run the pipeline
+    bool pipeline_success = run_and_free_pipeline(p, pl, errors_file);
+
+    // Close the open descriptor
+    if (m_encoder->encodes_to_stdout())
+        close(outfd);
+
+    // Get rid of the temporary file
+    if (!m_encoder->encodes_to_stdout())
+        unlink(tmp_file.c_str());
+
+    // Get rid of the output file and exit with error
+    // if the pipeline failed
+    if (!pipeline_success) {
+        unlink(output_file.c_str());
+        exit(EXIT_FAILURE);
+    }
+
+    // If we didn't create the file ourselves, we
+    // have to fix the permissions
+    if (!m_encoder->encodes_to_stdout())
+        chmod(output_file.c_str(), in_st.st_mode);
+
+    // Return successfully
+    exit(EXIT_SUCCESS);
+}
+
+int Walker::try_open_output_file(const fs::path &p, mode_t mode, const char *errors_file) {
+    int fd = open(p.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
+    if (fd == -1) {
+        std::ofstream err_out(errors_file);
+        err_out << PROGRAM_NAME ": unable to open `" << p.string() << "' for writing" << std::endl;
+    }
+    return fd;
+}
+
+bool Walker::run_and_free_pipeline(const fs::path &p, pipeline *pl, const char *errors_file) {
     // Get things started
     pipeline_start(pl);
     int status = pipeline_wait(pl);
 
-    // Make sure the commands returned EXIT_SUCCESS
+    // Handle errors
     if (status != 0) {
         char *pipeline_str = pipeline_tostring(pl);
         {
@@ -608,17 +711,12 @@ void Walker::parallel_transcode(boost::shared_ptr<work_unit_t> work)
         }
         free(pipeline_str);
         pipeline_free(pl);
-        close(outfd);
-        unlink(output_file.c_str());
-        exit(EXIT_FAILURE);
+        return false;
     }
 
-    // Free the pipeline
+    // Free the pipeline and return success
     pipeline_free(pl);
-    close(outfd);
-
-    // Return successfully
-    exit(EXIT_SUCCESS);
+    return true;
 }
 
 void Walker::worker_thread()
