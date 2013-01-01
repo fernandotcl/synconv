@@ -29,12 +29,12 @@ class LameCodec : public Codec
     public:
         void enter_decoder_pipeline(pipeline *p)
         {
-            pipeline_command_args(p, "lame", "-S", "--decode", "--mp3input", "-", "-", NULL);
+            pipeline_command_args(p, "lame", "--quiet", "--decode", "--mp3input", "-", "-", NULL);
         }
 
         void enter_encoder_pipeline(pipeline *p)
         {
-            pipecmd *cmd = pipecmd_new_args("lame", "-S", NULL);
+            pipecmd *cmd = pipecmd_new_args("lame", "--quiet", NULL);
             add_extra_options(cmd);
             pipecmd_args(cmd, "-", "-", NULL);
             pipeline_command(p, cmd);
