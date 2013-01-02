@@ -23,6 +23,7 @@ set(SYNCONV_HEADERS
     src/config.h
     src/ConservativeRenamingFilter.h
     src/Decoder.h
+    src/DummyCodec.h
     src/Encoder.h
     src/FlacCodec.h
     src/LameCodec.h

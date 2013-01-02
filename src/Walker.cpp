@@ -44,6 +44,7 @@ extern "C" {
 #include "AlacEncoder.h"
 #include "config.h"
 #include "ConservativeRenamingFilter.h"
+#include "DummyCodec.h"
 #include "FlacCodec.h"
 #include "LameCodec.h"
 #include "Walker.h"
@@ -98,6 +99,7 @@ Walker::Walker()
 {
     // Initialize the decoders and encoders
     m_encoders["alac"] = boost::shared_ptr<RootObject>(new AlacEncoder());
+    m_decoders["dummy"] = m_encoders["dummy"] = boost::shared_ptr<RootObject>(new DummyCodec());
     m_decoders["flac"] = m_encoders["flac"] = boost::shared_ptr<RootObject>(new FlacCodec());
     m_decoders["lame"] = m_encoders["lame"] = boost::shared_ptr<RootObject>(new LameCodec());
     m_decoders["vorbis"] = m_encoders["vorbis"] = boost::shared_ptr<RootObject>(new VorbisCodec());
@@ -108,6 +110,10 @@ bool Walker::set_encoder(const std::string &name)
     if (name == "alac") {
         m_encoder = dynamic_cast<Encoder *>(m_encoders["alac"].get());
         m_encoder_ext = L".m4a";
+    }
+    else if (name == "dummy") {
+        m_encoder = dynamic_cast<Encoder *>(m_encoders["dummy"].get());
+        m_encoder_ext = L".wav";
     }
     else if (name == "flac") {
         m_encoder = dynamic_cast<Encoder *>(m_encoders["flac"].get());
@@ -390,6 +396,8 @@ void Walker::visit_file(const fs::path &p)
             decoder = dynamic_cast<Decoder *>(m_decoders["lame"].get());
         else if (ext == ".ogg" || ext == ".oga")
             decoder = dynamic_cast<Decoder *>(m_decoders["vorbis"].get());
+        else if (ext == ".wav")
+            decoder = dynamic_cast<Decoder *>(m_decoders["dummy"].get());
     }
 
     // Check if we're transcoding or not
