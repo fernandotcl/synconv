@@ -1,7 +1,7 @@
 /*
  * This file is part of synconv.
  *
- * © 2011 Fernando Tarlá Cardoso Lemos
+ * © 2011,2013 Fernando Tarlá Cardoso Lemos
  *
  * synconv is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,8 +23,9 @@
 #define VORBIS_CODEC_H
 
 #include "Codec.h"
+#include "RootObject.h"
 
-class VorbisCodec : public Codec
+class VorbisCodec : public Codec, public RootObject
 {
     public:
         void enter_decoder_pipeline(pipeline *p)

@@ -12,11 +12,8 @@ The input files and directories are copied to the output directory. With recursi
 .B \-C\fR/\fB\-\-dont\-copy\-others
 Don't copy files that aren't being transcoded
 .TP
-.B \-F\fR/\fB\-\-flac\-option \fIoption
-Add \fIoption\fR to the list of command line arguments specified for the FLAC encoder
-.TP
-.B \-L\fR/\fB\-\-lame\-option \fIoption
-Add \fIoption\fR to the list of command line arguments specified for the LAME encoder
+.B \-E\fR/\fB\-\-encoder\-option \fIoption
+Add \fIoption\fR to the list of command line arguments specified for the encoder
 .TP
 .B \-N\fR/\fB\-\-renaming\-filter \fIfilter
 Set the renaming filter to \fIfilter\fR, which must be one of: \fIconservative\fR (a conservative filter, recommended when working with FAT32 filesystems) or \fInone\fR (don't use a renaming filter, default if not specified)
@@ -29,9 +26,6 @@ Don't recurse into input directories
 .TP
 .B \-T\fR/\fB\-\-dont\-transcode \fIext
 Don't try to transcode files with the \fIext\fR extension
-.TP
-.B \-V\fR/\fB\-\-vorbis\-option \fIoption
-Add \fIoption\fR to the list of command line arguments specified for the Ogg Vorbis encoder (oggenc)
 .TP
 .B \-d\fR/\fB\-\-delete
 Delete extraneous files from the destination directory after synchronization (use with care)

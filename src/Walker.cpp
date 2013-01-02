@@ -1,7 +1,7 @@
 /*
  * This file is part of synconv.
  *
- * © 2011-2012 Fernando Tarlá Cardoso Lemos
+ * © 2011-2013 Fernando Tarlá Cardoso Lemos
  *
  * synconv is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@
 #include <taglib/fileref.h>
 #include <taglib/tag.h>
 #include <algorithm>
+#include <cassert>
 #include <cstdlib>
 #include <exception>
 #include <fcntl.h>
@@ -40,9 +41,13 @@ extern "C" {
 #include <pipeline.h>
 }
 
+#include "AlacEncoder.h"
 #include "config.h"
 #include "ConservativeRenamingFilter.h"
+#include "FlacCodec.h"
+#include "LameCodec.h"
 #include "Walker.h"
+#include "VorbisCodec.h"
 
 namespace fs = boost::filesystem;
 
@@ -91,31 +96,44 @@ Walker::Walker()
       m_encoder(NULL), m_delete(false),
       m_num_workers(1), m_workers_should_quit(false)
 {
+    // Initialize the decoders and encoders
+    m_encoders["alac"] = boost::shared_ptr<RootObject>(new AlacEncoder());
+    m_decoders["flac"] = m_encoders["flac"] = boost::shared_ptr<RootObject>(new FlacCodec());
+    m_decoders["lame"] = m_encoders["lame"] = boost::shared_ptr<RootObject>(new LameCodec());
+    m_decoders["vorbis"] = m_encoders["vorbis"] = boost::shared_ptr<RootObject>(new VorbisCodec());
 }
 
 bool Walker::set_encoder(const std::string &name)
 {
     if (name == "alac") {
-        m_encoder = &m_alac_encoder;
+        m_encoder = dynamic_cast<Encoder *>(m_encoders["alac"].get());
         m_encoder_ext = L".m4a";
     }
     else if (name == "flac") {
-        m_encoder = &m_flac_codec;
+        m_encoder = dynamic_cast<Encoder *>(m_encoders["flac"].get());
         m_encoder_ext = L".flac";
     }
     else if (name == "lame") {
-        m_encoder = &m_lame_codec;
+        m_encoder = dynamic_cast<Encoder *>(m_encoders["lame"].get());
         m_encoder_ext = L".mp3";
     }
     else if (name == "vorbis") {
-        m_encoder = &m_vorbis_codec;
+        m_encoder = dynamic_cast<Encoder *>(m_encoders["vorbis"].get());
         m_encoder_ext = L".ogg";
     }
     else {
         std::cerr << PROGRAM_NAME ": unrecognized encoder name" << std::endl;
         return false;
     }
+    assert(m_encoder);
     return true;
+}
+
+void Walker::set_encoder_options(const std::list<std::string> &options)
+{
+    assert(m_encoder);
+    BOOST_FOREACH(const std::string &option, options)
+        m_encoder->add_extra_option(option);
 }
 
 bool Walker::set_renaming_filter(const std::string &filter)
@@ -367,11 +385,11 @@ void Walker::visit_file(const fs::path &p)
     Decoder *decoder = NULL;
     if (m_dont_transcode_exts.find(ext) == m_dont_transcode_exts.end()) {
         if (ext == ".flac")
-            decoder = &m_flac_codec;
+            decoder = dynamic_cast<Decoder *>(m_decoders["flac"].get());
         else if (ext == ".mp3")
-            decoder = &m_lame_codec;
+            decoder = dynamic_cast<Decoder *>(m_decoders["lame"].get());
         else if (ext == ".ogg" || ext == ".oga")
-            decoder = &m_vorbis_codec;
+            decoder = dynamic_cast<Decoder *>(m_decoders["vorbis"].get());
     }
 
     // Check if we're transcoding or not

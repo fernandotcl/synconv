@@ -1,7 +1,7 @@
 /*
  * This file is part of synconv.
  *
- * © 2011 Fernando Tarlá Cardoso Lemos
+ * © 2011,2013 Fernando Tarlá Cardoso Lemos
  *
  * synconv is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,11 +38,10 @@ extern "C" {
 #include <pipeline.h>
 }
 
-#include "AlacEncoder.h"
-#include "FlacCodec.h"
-#include "LameCodec.h"
+#include "Decoder.h"
+#include "Encoder.h"
 #include "RenamingFilter.h"
-#include "VorbisCodec.h"
+#include "RootObject.h"
 
 class Walker
 {
@@ -68,12 +67,9 @@ class Walker
         bool set_encoder(const std::string &name);
         bool has_encoder() const { return m_encoder != NULL; }
 
-        bool set_renaming_filter(const std::string &filter);
+        void set_encoder_options(const std::list<std::string> &options);
 
-        void add_afconvert_option(const std::string &option) { m_alac_encoder.add_extra_option(option); }
-        void add_flac_option(const std::string &option) { m_flac_codec.add_extra_option(option); }
-        void add_lame_option(const std::string &option) { m_lame_codec.add_extra_option(option); }
-        void add_vorbis_option(const std::string &option) { m_vorbis_codec.add_extra_option(option); }
+        bool set_renaming_filter(const std::string &filter);
 
         void add_dont_transcode(const std::string &ext);
         void set_output_extension(const std::string &ext);
@@ -119,10 +115,7 @@ class Walker
 
         bool m_verbose, m_quiet, m_dry_run;
 
-        AlacEncoder m_alac_encoder;
-        FlacCodec m_flac_codec;
-        LameCodec m_lame_codec;
-        VorbisCodec m_vorbis_codec;
+        std::map<std::string, boost::shared_ptr<RootObject> > m_decoders, m_encoders;
 
         Encoder *m_encoder;
         std::wstring m_encoder_ext;

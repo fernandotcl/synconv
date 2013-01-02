@@ -1,7 +1,7 @@
 /*
  * This file is part of synconv.
  *
- * © 2011 Fernando Tarlá Cardoso Lemos
+ * © 2011,2013 Fernando Tarlá Cardoso Lemos
  *
  * synconv is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,13 +45,11 @@ int main(int argc, char **argv)
 {
     struct option long_options[] = {
         {"dont-copy-others", no_argument, NULL, 'C'},
-        {"flac-option", required_argument, NULL, 'F'},
-        {"lame-option", required_argument, NULL, 'L'},
+        {"encoder-option", required_argument, NULL, 'E'},
         {"renaming-filter", required_argument, NULL, 'N'},
         {"output-extension", required_argument, NULL, 'O'},
         {"dont-recurse", no_argument, NULL, 'R'},
         {"dont-transcode", required_argument, NULL, 'T'},
-        {"vorbis-option", required_argument, NULL, 'V'},
         {"delete", no_argument, NULL, 'd' },
         {"encoder", required_argument, NULL, 'e' },
         {"help", no_argument, NULL, 'h'},
@@ -69,19 +67,14 @@ int main(int argc, char **argv)
 
     // Parse the command line options
     int opt;
-    while ((opt = getopt_long(argc, argv, "ACF:L:O:N:RT:V:de:hno:qrt:v", long_options, NULL)) != -1) {
+    std::list<std::string> encoder_options;
+    while ((opt = getopt_long(argc, argv, "CE:N:O:RT:de:hno:qrt:v", long_options, NULL)) != -1) {
         switch (opt) {
-            case 'A':
-                walker.add_afconvert_option(optarg);
-                break;
             case 'C':
                 walker.set_copy_other(false);
                 break;
-            case 'F':
-                walker.add_flac_option(optarg);
-                break;
-            case 'L':
-                walker.add_lame_option(optarg);
+            case 'E':
+                encoder_options.push_back(optarg);
                 break;
             case 'N':
                 if (!walker.set_renaming_filter(optarg))
@@ -95,9 +88,6 @@ int main(int argc, char **argv)
                 break;
             case 'T':
                 walker.add_dont_transcode(optarg);
-                break;
-            case 'V':
-                walker.add_vorbis_option(optarg);
                 break;
             case 'd':
                 walker.set_delete(true);
@@ -163,6 +153,9 @@ int main(int argc, char **argv)
     // Fallback to the LAME encoder
     if (!walker.has_encoder())
         walker.set_encoder("lame");
+
+    // Set the encoder options
+    walker.set_encoder_options(encoder_options);
 
     // We need at least an input and an output
     int num_args = argc - optind;

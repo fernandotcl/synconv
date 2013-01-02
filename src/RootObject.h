@@ -1,7 +1,7 @@
 /*
  * This file is part of synconv.
  *
- * © 2011,2013 Fernando Tarlá Cardoso Lemos
+ * © 2013 Fernando Tarlá Cardoso Lemos
  *
  * synconv is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,27 +19,13 @@
  *
  */
 
-#ifndef LAME_CODEC_H
-#define LAME_CODEC_H
+#ifndef ROOT_OBJECT_H
+#define ROOT_OBJECT_H
 
-#include "Codec.h"
-#include "RootObject.h"
-
-class LameCodec : public Codec, public RootObject
+class RootObject
 {
     public:
-        void enter_decoder_pipeline(pipeline *p)
-        {
-            pipeline_command_args(p, "lame", "--quiet", "--decode", "--mp3input", "-", "-", NULL);
-        }
-
-        void enter_encoder_pipeline(pipeline *p)
-        {
-            pipecmd *cmd = pipecmd_new_args("lame", "--quiet", NULL);
-            add_extra_options(cmd);
-            pipecmd_args(cmd, "-", "-", NULL);
-            pipeline_command(p, cmd);
-        }
+        virtual ~RootObject() {}
 };
 
 #endif
