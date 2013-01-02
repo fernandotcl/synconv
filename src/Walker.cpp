@@ -609,7 +609,7 @@ void Walker::parallel_transcode(boost::shared_ptr<work_unit_t> work)
         exit(EXIT_SUCCESS);
 
     // If the encoder can't read from stdin, we have
-    // to create to output to a temporary file first
+    // to output to a temporary file first
     fs::path tmp_file;
     if (!m_encoder->encodes_from_stdin()) {
         // Open the temporary file
