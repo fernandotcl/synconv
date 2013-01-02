@@ -27,6 +27,7 @@ set(SYNCONV_HEADERS
     src/FlacCodec.h
     src/LameCodec.h
     src/RenamingFilter.h
+    src/RootObject.h
     src/VorbisCodec.h
     src/Walker.h)
 
