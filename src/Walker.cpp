@@ -111,7 +111,7 @@ bool Walker::set_encoder(const std::string &name)
         m_encoder = dynamic_cast<Encoder *>(m_encoders["alac"].get());
         m_encoder_ext = L".m4a";
     }
-    else if (name == "dummy") {
+    else if (name == "dummy" || name == "wave" || name == "wav") {
         m_encoder = dynamic_cast<Encoder *>(m_encoders["dummy"].get());
         m_encoder_ext = L".wav";
     }
@@ -119,7 +119,7 @@ bool Walker::set_encoder(const std::string &name)
         m_encoder = dynamic_cast<Encoder *>(m_encoders["flac"].get());
         m_encoder_ext = L".flac";
     }
-    else if (name == "lame") {
+    else if (name == "lame" || name == "mp3") {
         m_encoder = dynamic_cast<Encoder *>(m_encoders["lame"].get());
         m_encoder_ext = L".mp3";
     }
