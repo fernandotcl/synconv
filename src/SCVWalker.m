@@ -71,10 +71,10 @@
                 [_stack addObject:inputPath.lastPathComponent];
 
             // Walk the hierarchy
-            [self walk:[NSURL fileURLWithPath:inputPath] fileVisitor:^(NSURL *url) {
-                [self visitFile:url];
-            } dirVisitor:^BOOL(NSURL *url) {
-                return [self visitDirectory:url];
+            [self walk:inputPath fileVisitor:^(NSString *path) {
+                [self visitFile:path];
+            } dirVisitor:^BOOL(NSString *path) {
+                return [self visitDirectory:path];
             }];
         }
         else {
@@ -82,7 +82,7 @@
             BOOL isRegularFile = [attrs[NSFileType] isEqualToString:NSFileTypeRegular];
             if (isRegularFile) {
                 _currentOutputDir = _baseOutputDir;
-                [self visitFile:[NSURL fileURLWithPath:inputPath]];
+                [self visitFile:inputPath];
             } else {
                 SCVConsoleLogError(@"skipping `%@' (not a regular file or directory)",
                                    inputPath.lastPathComponent);
@@ -107,14 +107,14 @@
     return [path stringByStandardizingPath];
 }
 
-- (void)walk:(NSURL *)url
- fileVisitor:(void (^)(NSURL *))fileVisitor
-  dirVisitor:(BOOL (^)(NSURL *))dirVisitor
+- (void)walk:(NSString *)path
+ fileVisitor:(void (^)(NSString *))fileVisitor
+  dirVisitor:(BOOL (^)(NSString *))dirVisitor
 {
     NSArray *properties = @[NSURLIsRegularFileKey, NSURLIsDirectoryKey];
 
     NSFileManager *fm = [NSFileManager defaultManager];
-    NSArray *children = [fm contentsOfDirectoryAtURL:url
+    NSArray *children = [fm contentsOfDirectoryAtURL:[NSURL fileURLWithPath:path]
                           includingPropertiesForKeys:properties
                                              options:0
                                                error:NULL];
@@ -131,12 +131,12 @@
             if (isDirectory.boolValue) {
                 // Push the child into the stack, visit, then pop it
                 [_stack addObject:child.lastPathComponent];
-                if (dirVisitor(child)) {
-                    [self walk:child fileVisitor:fileVisitor dirVisitor:dirVisitor];
+                if (dirVisitor(child.path)) {
+                    [self walk:child.path fileVisitor:fileVisitor dirVisitor:dirVisitor];
                 }
                 [_stack removeLastObject];
             } else if (isRegularFile.boolValue) {
-                fileVisitor(child);
+                fileVisitor(child.path);
             } else {
                 SCVConsoleLogError(@"skipping `%@' (not a regular file or directory)",
                                    child.lastPathComponent);
@@ -145,33 +145,34 @@
     }
 }
 
-- (BOOL)visitDirectory:(NSURL *)url
+- (BOOL)visitDirectory:(NSString *)path
 {
     if (!self.recursive) {
-        SCVConsoleLog(@"skipping `%@' (recursion disabled)", url.lastPathComponent);
+        SCVConsoleLog(@"skipping `%@' (recursion disabled)", path.lastPathComponent);
         return NO;
     }
 
     if (!self.quiet) {
-        SCVConsolePrint(@"Entering `%@'", url.lastPathComponent);
+        SCVConsolePrint(@"Entering `%@'", path.lastPathComponent);
     }
 
     _currentOutputDir = _baseOutputDir;
-    for (NSString *path in _stack)
+    for (NSString *path in _stack) {
         _currentOutputDir = [_currentOutputDir stringByAppendingPathComponent:path];
+    }
 
     _currentOutputDirCreated = self.dryRun;
 
     return YES;
 }
 
-- (void)visitFile:(NSURL *)url
+- (void)visitFile:(NSString *)inputPath
 {
     if (_currentOutputDirCreationFailed) {
         return;
     }
 
-    NSString *extension = url.pathExtension.lowercaseString;
+    NSString *extension = inputPath.pathExtension.lowercaseString;
     SCVPlugin <SCVDecoder, SCVPlugin> *decoder = (SCVPlugin <SCVDecoder, SCVPlugin> *)
         [[SCVPluginManager sharedInstance] pluginForDecodingFileWithExtension:extension];
     BOOL transcoding = decoder && (self.reencode || ![decoder isEqualTo:self.encoder]);
@@ -185,21 +186,21 @@
     // Save the original file's attributes for later use
     NSError *error;
     NSFileManager *fm = [NSFileManager defaultManager];
-    NSDictionary *inputAttrs = [fm attributesOfItemAtPath:url.path error:&error];
+    NSDictionary *inputAttrs = [fm attributesOfItemAtPath:inputPath error:&error];
     if (!inputAttrs) {
-        SCVConsoleLogError(@"failed to stat `%@': %@", url.lastPathComponent,
+        SCVConsoleLogError(@"failed to stat `%@': %@", inputPath.lastPathComponent,
                            error.localizedDescription);
     }
 
-    NSString *outputPath = [_currentOutputDir stringByAppendingPathComponent:url.lastPathComponent];
+    NSString *outputPath = [_currentOutputDir stringByAppendingPathComponent:inputPath.lastPathComponent];
     if (transcoding) {
         outputPath = [outputPath stringByDeletingPathExtension];
         outputPath = [outputPath stringByAppendingPathExtension:self.encoderExtension];
     }
 
-    if ([outputPath isEqualToString:url.path]) {
+    if ([outputPath isEqualToString:inputPath]) {
         SCVConsoleLogError(@"skipping `%@' (input and output files are the same)",
-                           url.lastPathComponent);
+                           inputPath.lastPathComponent);
         return;
     }
 
@@ -240,7 +241,7 @@
 
         if (!self.dryRun) {
             [fm removeItemAtPath:outputPath error:NULL];
-            if (![fm copyItemAtPath:url.path toPath:outputPath error:&error]) {
+            if (![fm copyItemAtPath:inputPath toPath:outputPath error:&error]) {
                 SCVConsoleLogError(@"failed to copy `%@': %@", outputPath.lastPathComponent,
                                    error.localizedDescription);
                 return;
@@ -264,7 +265,7 @@
     dispatch_group_async(_transcoding_group, queue, ^{
         if (!self.dryRun) {
             dispatch_semaphore_wait(_transcoding_semaphore, DISPATCH_TIME_FOREVER);
-            BOOL success = [self runTranscodingPipelineForInputPath:url.path
+            BOOL success = [self runTranscodingPipelineForInputPath:inputPath
                                                          inputAttrs:inputAttrs
                                                             decoder:decoder
                                                          outputPath:outputPath];
