@@ -197,6 +197,12 @@
         outputPath = [outputPath stringByAppendingPathExtension:self.encoderExtension];
     }
 
+    if ([outputPath isEqualToString:url.path]) {
+        SCVConsoleLogError(@"skipping `%@' (input and output files are the same)",
+                           url.lastPathComponent);
+        return;
+    }
+
     if (self.overwriteMode != kSCVWalkerOverwriteModeAlways) {
         NSDictionary *outputAttrs = [fm attributesOfItemAtPath:outputPath error:NULL];
         if (outputAttrs) {
