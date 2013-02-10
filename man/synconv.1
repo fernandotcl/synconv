@@ -1,10 +1,10 @@
-.TH SYNCONV 1 2011-09-26 "synconv" "synconv Manual"
+.TH SYNCONV 1 2013-02-10 "synconv" "synconv Manual"
 .SH NAME
-synconv \- A command line based multimedia tagger
+synconv \- A command line based audio format transcoder
 .SH SYNOPSIS
-.B synconv [\fIoptions\fR] \fIfile_or_dir\fR [\fIfile_or_dir\fR] ... \fIoutput_dir\fR
+.B synconv \fR[\fIoptions\fR] \fIfile_or_dir\fR [\fIfile_or_dir\fR] ... \fIoutput_dir\fR
 .SH DESCRIPTION
-synconv is a command line based audio format transcoder with an \fBrsync\fR(1)\-like behavior. It creates transcoding pipelines when that are run in parallel and can copy other files as well. By checking timestamps, it can decide whether or not to skip copying or transcoding for certain files, making it easy to keep audio files synchronized between devices of different audio playing capabilities.
+synconv is a command line based audio format transcoder with an \fBrsync\fR(1)\(hylike behavior. It creates transcoding pipelines when that are run in parallel and can copy other files as well. By checking timestamps, it can decide whether or not to skip copying or transcoding certain files, making it easy to keep synchronized audio file collections in different formats.
 
 The input files and directories are copied to the output directory. With recursive transversal, the file hierarchy of the input directories is mirrored. The input files are transcoded if needed, or may otherwise be copied.
 .SH OPTIONS
@@ -31,7 +31,7 @@ Don't try to transcode files with the \fIext\fR extension
 Delete extraneous files from the destination directory after synchronization (use with care)
 .TP
 .B \-e\fR/\fB\-\-encoder \fIname
-Set the encoder to \fIname\fR, which must be one of: \fIflac\fR (encodes into the FLAC format), \fImp3\fR (encodes into the MP3 format, default if not specified), \fIvorbis\fR (encodes into the Ogg Vorbis format) or \fIwave\fR (encodes into the WAVE format)
+Set the encoder to \fIname\fR, which must be one of: \fIflac\fR (encodes into the FLAC format), \fIlame\fR or \fImp3\fR (encodes into the MP3 format, default if not specified) or \fIvorbis\fR (encodes into the Ogg Vorbis format)
 .TP
 .B \-h\fR/\fB\-\-help
 Display usage information and exit
@@ -49,56 +49,53 @@ Don't output informational messages
 Re-encode files that are already encoded in the format of the selected encoder
 .TP
 .B \-t\fR/\fB\-\-threads \fInum
-Use \fInum\fR worker threads for parallel transcoding (defaults to \fI1\fR, but you probably want to match it to the number of processing cores in your machine for optimal performance)
+Use \fInum\fR worker threads for transcoding (defaults to \fI2n\fR, where \fIn\fR is the number of processing cores in the computer)
 .TP
 .B \-v\fR/\fB\-\-verbose
 Increase the verbosity of informational messages
 .SH TRAILING SLASHES
 The handling of trailing slashes should work exactly like in \fBrsync\fR(1). Some examples borrowed from \fBrsync\fR(1):
 
-.RS 
-\f(CWsynconv src/bar /data/tmp\fP
-.RE
+.nf
+$ synconv src/bar /data/tmp
+.fi
 
-.PP 
 This would recursively copy or transcode all files from the directory src/bar into the /data/tmp/bar directory.
-.PP 
-.RS 
-\f(CWsynconv src/bar/ /data/tmp\fP
-.RE
+
+.nf
+$ synconv src/bar/ /data/tmp
+.fi
 
 .PP 
 A trailing slash on the input directories changes this behavior to avoid creating an additional directory level at the destination. You can think of a trailing on an input directory as meaning \(dq\&copy or transcode the contents of this directory\(dq\& as opposed to \(dq\&copy or transcode the directory and its contents by name\(dq\&. In other words, each of the following commands copies or transcodes the files in the same way:
-.PP 
-.RS 
-\f(CWsynconv /src/foo /dest\fP
-.br 
-\f(CWsynconv /src/foo/ /dest/foo\fP
-.br 
-.RE
-.SH EXAMPLE
-Typical usage scenario, synchronizing audio files with a device that can only handle the MP3 format. Existing MP3 files will not be re\-encoded. Command line switches will be passed to the lame encoder so that FLAC and Ogg Vorbis files will be encoded using high\-quality variable bitrate (\-V2) and higher quality encoding (\-h). The output files will be stored in a mounted FAT32 filesystem. Assuming a quad\-core computer is being used, 4 worker threads will be launched:
 
 .nf
-$ synconv \-L\-V2 \-L\-h \-t4 \-Nconservative /music/ /media/my_device/music
+$ synconv /src/foo /dest
+$ synconv /src/foo/ /dest/foo
+.fi
+.SH EXAMPLE
+Typical usage scenario, synchronizing audio files with a device that can only handle the MP3 format. Existing MP3 files will not be re\(hyencoded. Command line switches will be passed to the lame encoder so that FLAC and Ogg Vorbis files will be encoded using high quality variable bitrate (\-V2) and higher quality encoding (\-h). The output files will be stored in a mounted FAT32 filesystem:
+
+.nf
+$ synconv \-E \-V2 \-E \-h \-N conservative /music/ /media/my_device/music
 .fi
 
 Similar scenario, but preferring Ogg Vorbis. If the files are in MP3 format, don't attempt to transcode:
 
 .nf
-$ synconv \-e vorbis \-Tmp3 \-t4 \-Nconservative /music/ /media/my_device/music
+$ synconv \-e vorbis \-T mp3 \-N conservative /music/ /media/my_device/music
 .fi
 
 Same scenario, but if you prefer to use the .oga extension for Ogg Vorbis:
 
 .nf
-$ synconv \-e vorbis \-Ooga \-Tmp3 \-t4 \-Nconservative /music/ /media/my_device/music
+$ synconv \-e vorbis \-O oga \-T mp3 \-N conservative /music/ /media/my_device/music
 .fi
 
-Transcoding files to low\-quality Ogg Vorbis, re\-encoding existing files. Never overwriting existing files. Assuming a dual\-core computer is being used, 2 worker threads will be launched:
+Transcoding files to low\-quality Ogg Vorbis, re\-encoding existing files. Never overwriting existing files:
 
 .nf
-$ synconv \-e vorbis \-V\-q1 \-t2 \-onever /path/to/foo /path/to/bar
+$ synconv \-e vorbis \-E \-q1 \-o never /path/to/foo /path/to/bar
 .fi
 
 Using the \fB\-\-delete\fR option is dangerous. Make sure you use it with the \fB\-\-dry\-run\fR option first so that you can be sure the outcome will match your expectations:
