@@ -90,6 +90,10 @@
 
     // Wait for the transcoding threads
     dispatch_group_wait(_transcoding_group, DISPATCH_TIME_FOREVER);
+
+    if (self.dryRun) {
+        SCVConsoleLog(@"finished running in dry-run mode, no actual changes made");
+    }
 }
 
 - (void)walk:(NSURL *)url
