@@ -30,6 +30,8 @@ typedef enum : unsigned char {
 
 @property (nonatomic, assign) BOOL reencode;
 
+@property (nonatomic, assign) NSArray *noTranscodingExtensions;
+
 @property (nonatomic, assign) SCVWalkerOverwriteMode overwriteMode;
 
 @property (nonatomic, assign) BOOL copyOther;

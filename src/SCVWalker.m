@@ -161,6 +161,12 @@
         [[SCVPluginManager sharedInstance] pluginForDecodingFileWithExtension:extension];
     BOOL transcoding = decoder && (self.reencode || ![decoder isEqualTo:self.encoder]);
 
+    if (transcoding && self.noTranscodingExtensions) {
+        if ([self.noTranscodingExtensions indexOfObject:extension] != NSNotFound) {
+            transcoding = NO;
+        }
+    }
+
     // Save the original file's attributes for later use
     NSError *error;
     NSFileManager *fm = [NSFileManager defaultManager];

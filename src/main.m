@@ -51,6 +51,7 @@ static int autorelease_main(int argc, char **argv)
     SCVWalker *walker = [SCVWalker new];
     NSString *encoderName = nil;
     NSMutableArray *additionalEncoderOptions = [NSMutableArray new];
+    NSMutableArray *noTranscodingExtensions = [NSMutableArray new];
 
     int opt;
     while ((opt = getopt_long(argc, argv, options, long_options, NULL)) != -1) {
@@ -70,9 +71,11 @@ static int autorelease_main(int argc, char **argv)
             case 'R':
                 walker.recursive = NO;
                 break;
-            case 'T':
-                // TODO
+            case 'T': {
+                NSString *extension = [NSString stringWithCString:optarg encoding:NSUTF8StringEncoding];
+                [noTranscodingExtensions addObject:extension.lowercaseString];
                 break;
+            }
             case 'd':
                 // TODO
                 break;
@@ -175,6 +178,8 @@ static int autorelease_main(int argc, char **argv)
     if (!walker.encoderExtension) {
         walker.encoderExtension = [(id <SCVEncoder>)walker.encoder preferredEncoderExtension];
     }
+
+    walker.noTranscodingExtensions = noTranscodingExtensions;
 
     [walker walk:inputPaths outputDir:outputDir];
 
