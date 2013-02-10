@@ -1,3 +1,9 @@
+2.0.0
+=====
+
+* Converted to Objective-C, Cocoa and GCD.
+* Uses multiple threads for transcoding by default.
+
 1.1.2
 =====
 
@@ -11,7 +17,7 @@
 1.1.0
 =====
 
-* New options (-O, -T, -d, -n)
+* New options (-O, -T, -d, -n).
 * Assorted bugfixes.
 
 1.0.0
