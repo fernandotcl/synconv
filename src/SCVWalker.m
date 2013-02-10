@@ -80,6 +80,8 @@
                 [self visitFile:path];
             } dirVisitor:^BOOL(NSString *path) {
                 return [self visitDirectory:path];
+            } dirVisitorAfter:^(NSString *path) {
+                [self visitDirectoryAfter:path];
             }];
         }
         else {
@@ -128,7 +130,7 @@
             }
 
             return YES;
-        }];
+        } dirVisitorAfter:nil];
 
         // Sort the paths by depth so deletion works (we must delete
         // the deepest paths before we can delete their parents)
@@ -183,6 +185,7 @@
 - (void)walk:(NSString *)path
  fileVisitor:(void (^)(NSString *))fileVisitor
   dirVisitor:(BOOL (^)(NSString *))dirVisitor
+dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
 {
     NSArray *properties = @[NSURLIsRegularFileKey, NSURLIsDirectoryKey];
 
@@ -202,12 +205,14 @@
             [child getResourceValue:&isRegularFile forKey:NSURLIsRegularFileKey error:NULL];
             [child getResourceValue:&isDirectory forKey:NSURLIsDirectoryKey error:NULL];
             if (isDirectory.boolValue) {
-                // Push the child into the stack, visit, then pop it
-                [_stack addObject:child.lastPathComponent];
                 if (dirVisitor(child.path)) {
-                    [self walk:child.path fileVisitor:fileVisitor dirVisitor:dirVisitor];
+                    [self walk:child.path fileVisitor:fileVisitor
+                    dirVisitor:dirVisitor
+               dirVisitorAfter:dirVisitorAfter];
+                    if (dirVisitorAfter) {
+                        dirVisitorAfter(child.path);
+                    }
                 }
-                [_stack removeLastObject];
             } else if (isRegularFile.boolValue) {
                 fileVisitor(child.path);
             } else {
@@ -229,6 +234,9 @@
         SCVConsolePrint(@"Entering `%@'", path.lastPathComponent);
     }
 
+    // Push the directory into the stack
+    [_stack addObject:path.lastPathComponent];
+
     _currentOutputDir = _baseOutputDir;
     for (NSString *path in _stack) {
         _currentOutputDir = [_currentOutputDir stringByAppendingPathComponent:path];
@@ -237,6 +245,14 @@
     _currentOutputDirCreated = self.dryRun;
 
     return YES;
+}
+
+- (void)visitDirectoryAfter:(NSString *)path
+{
+    if (!self.recursive) {
+        // Pop the directory we had pushed
+        [_stack removeLastObject];
+    }
 }
 
 - (void)visitFile:(NSString *)inputPath
