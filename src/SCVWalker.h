@@ -11,6 +11,7 @@
 
 #import "SCVEncoder.h"
 #import "SCVPlugin.h"
+#import "SCVRenamingFilter.h"
 
 typedef enum : unsigned char {
     kSCVWalkerOverwriteModeAuto,
@@ -25,6 +26,8 @@ typedef enum : unsigned char {
 @property (nonatomic, strong) SCVPlugin <SCVEncoder, SCVPlugin> *encoder;
 
 @property (nonatomic, strong) NSString *encoderExtension;
+
+@property (nonatomic, strong) SCVRenamingFilter *renamingFilter;
 
 @property (nonatomic, assign) BOOL recursive;
 

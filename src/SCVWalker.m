@@ -234,8 +234,14 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
         SCVConsolePrint(@"Entering `%@'", path.lastPathComponent);
     }
 
+    // Apply the renaming filter
+    NSString *outputDir = path.lastPathComponent;
+    if (self.renamingFilter) {
+        outputDir = [self.renamingFilter renamedPathComponent:outputDir];
+    }
+
     // Push the directory into the stack
-    [_stack addObject:path.lastPathComponent];
+    [_stack addObject:outputDir];
 
     _currentOutputDir = _baseOutputDir;
     for (NSString *path in _stack) {
@@ -281,17 +287,24 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
                            error.localizedDescription);
     }
 
-    NSString *outputPath = [_currentOutputDir stringByAppendingPathComponent:inputPath.lastPathComponent];
-    if (transcoding) {
-        outputPath = [outputPath stringByDeletingPathExtension];
-        outputPath = [outputPath stringByAppendingPathExtension:self.encoderExtension];
-    }
-
+    NSString *outputFilename = inputPath.lastPathComponent;
+    NSString *outputPath = [_currentOutputDir stringByAppendingPathComponent:outputFilename];
     if ([outputPath isEqualToString:inputPath]) {
         SCVConsoleLogError(@"skipping `%@' (input and output files are the same)",
                            inputPath.lastPathComponent);
         return;
     }
+
+    // Apply the renaming filter
+    if (self.renamingFilter) {
+        outputFilename = [self.renamingFilter renamedPathComponent:outputFilename];
+    }
+
+    if (transcoding) {
+        outputFilename = [outputFilename stringByDeletingPathExtension];
+        outputFilename = [outputFilename stringByAppendingPathExtension:self.encoderExtension];
+    }
+    outputPath = [_currentOutputDir stringByAppendingPathComponent:outputFilename];
 
     [_pathsToKeep addObject:[outputPath stringByDeletingLastPathComponent]];
     [_pathsToKeep addObject:outputPath];
@@ -302,7 +315,7 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
             // If we're not overwriting, just skip it
             if (self.overwriteMode == kSCVWalkerOverwriteModeNever) {
                 if (self.verbose) {
-                    SCVConsoleLog(@"skipping `%@' (not overwriting)", outputPath.lastPathComponent);
+                    SCVConsoleLog(@"skipping `%@' (not overwriting)", outputFilename);
                 }
                 return;
             }
@@ -312,7 +325,7 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
             NSDate *outputDate = inputAttrs[NSFileModificationDate];
             if ([outputDate isGreaterThanOrEqualTo:inputDate]) {
                 if (self.verbose) {
-                    SCVConsoleLog(@"skipping `%@' (up-to-date)", outputPath.lastPathComponent);
+                    SCVConsoleLog(@"skipping `%@' (up-to-date)", outputFilename);
                 }
                 return;
             }
@@ -322,7 +335,7 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
     if (!transcoding) {
         if (!self.copyOther) {
             if (self.verbose) {
-                SCVConsoleLog(@"skipping `%@'", outputPath.lastPathComponent);
+                SCVConsoleLog(@"skipping `%@'", outputFilename);
             }
             return;
         }
@@ -334,7 +347,7 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
         if (!self.dryRun) {
             [fm removeItemAtPath:outputPath error:NULL];
             if (![fm copyItemAtPath:inputPath toPath:outputPath error:&error]) {
-                SCVConsoleLogError(@"failed to copy `%@': %@", outputPath.lastPathComponent,
+                SCVConsoleLogError(@"failed to copy `%@': %@", outputFilename,
                                    error.localizedDescription);
                 return;
             }
@@ -343,7 +356,7 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
         }
 
         if (!self.quiet) {
-            SCVConsolePrint(@"Copied `%@'", outputPath.lastPathComponent);
+            SCVConsolePrint(@"Copied `%@'", outputFilename);
         }
 
         return;
@@ -370,7 +383,7 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
 
         if (!self.quiet) {
             NSString *action = [decoder isEqualTo:self.encoder] ? @"Re-encoded" : @"Transcoded";
-            SCVConsolePrint(@"%@ `%@'", action, outputPath.lastPathComponent);
+            SCVConsolePrint(@"%@ `%@'", action, outputFilename);
         }
     });
 }

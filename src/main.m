@@ -13,6 +13,7 @@
 #import <stdlib.h>
 #import <stdio.h>
 
+#import "SCVConservativeRenamingFilter.h"
 #import "SCVConsole.h"
 #import "SCVEncoder.h"
 #import "SCVPluginManager.h"
@@ -62,9 +63,15 @@ static int autorelease_main(int argc, char **argv)
             case 'E':
                 [additionalEncoderOptions addObject:[NSString stringWithCString:optarg encoding:NSUTF8StringEncoding]];
                 break;
-            case 'N':
-                // TODO
+            case 'N': {
+                NSString *filter = [NSString stringWithCString:optarg encoding:NSUTF8StringEncoding];
+                if ([filter isEqualToString:@"conservative"]) {
+                    walker.renamingFilter = [SCVConservativeRenamingFilter new];
+                } else if ([filter isEqualToString:@"none"]) {
+                    walker.renamingFilter = nil;
+                }
                 break;
+            }
             case 'O':
                 walker.encoderExtension = [NSString stringWithCString:optarg encoding:NSUTF8StringEncoding];
                 break;

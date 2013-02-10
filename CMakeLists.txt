@@ -9,9 +9,11 @@ pkg_check_modules(TAGLIB REQUIRED taglib)
 add_definitions(-DPROGRAM_NAME=\"${PROJECT_NAME}\")
 
 set(SYNCONV_SOURCES
+    src/SCVConservativeRenamingFilter.m
     src/SCVConsole.m
     src/SCVPlugin.m
     src/SCVPluginManager.m
+    src/SCVRenamingFilter.m
     src/SCVTagger.mm
     src/SCVWalker.m
     src/main.m
@@ -20,11 +22,13 @@ set(SYNCONV_SOURCES
     src/plugins/SCVVorbisPlugin.m)
 
 set(SYNCONV_HEADERS
+    src/SCVConservativeRenamingFilter.h
     src/SCVConsole.h
     src/SCVDecoder.h
     src/SCVEncoder.h
     src/SCVPlugin.h
     src/SCVPluginManager.h
+    src/SCVRenamingFilter.h
     src/SCVTagger.h
     src/SCVWalker.h
     src/plugins/SCVFlacPlugin.h
