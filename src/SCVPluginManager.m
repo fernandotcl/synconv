@@ -56,8 +56,9 @@
     for (SCVPlugin <SCVPlugin> *plugin in _plugins) {
         if (plugin.enabledForDecoding) {
             NSArray *extensions = [(SCVPlugin <SCVDecoder> *)plugin decoderExtensions];
-            if ([extensions indexOfObject:extension] != NSNotFound)
+            if ([extensions indexOfObject:extension] != NSNotFound) {
                 return plugin;
+            }
         }
     }
     return nil;
