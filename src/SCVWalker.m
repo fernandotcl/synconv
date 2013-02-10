@@ -52,12 +52,14 @@
     }
     _transcoding_semaphore = dispatch_semaphore_create(self.numThreads);
 
-    _baseOutputDir = outputDir;
+    _baseOutputDir = [self absolutePathWithPath:outputDir];
 
     NSFileManager *fm = [NSFileManager defaultManager];
-    for (NSString *inputPath in inputPaths) {
+    for (__strong NSString *inputPath in inputPaths) {
         // Make sure the stack is clear
         [_stack removeAllObjects];
+
+        inputPath = [self absolutePathWithPath:inputPath];
 
         BOOL isDirectory;
         [fm fileExistsAtPath:inputPath isDirectory:&isDirectory];
@@ -94,6 +96,15 @@
     if (self.dryRun) {
         SCVConsoleLog(@"finished running in dry-run mode, no actual changes made");
     }
+}
+
+- (NSString *)absolutePathWithPath:(NSString *)path
+{
+    if (![path hasPrefix:@"/"]) {
+        NSString *cwd = [NSFileManager defaultManager].currentDirectoryPath;
+        path = [cwd stringByAppendingPathComponent:path];
+    }
+    return [path stringByStandardizingPath];
 }
 
 - (void)walk:(NSURL *)url
