@@ -17,6 +17,7 @@
 
 @implementation SCVWalker {
     NSMutableArray *_stack;
+    NSMutableSet *_pathsToKeep;
 
     NSString *_baseOutputDir;
     NSString *_currentOutputDir;
@@ -32,6 +33,7 @@
     self = [super init];
     if (self) {
         _stack = [NSMutableArray arrayWithCapacity:5];
+        _pathsToKeep = [NSMutableSet setWithCapacity:100];
         _transcoding_group = dispatch_group_create();
 
         self.recursive = YES;
@@ -67,8 +69,11 @@
             // If the last character of the input directory is the path separator
             // or if the output directory doesn't exist, copy its contents instead
             // (like the Unix cp command does)
-            if (![inputPath hasSuffix:@"/"])
+            if (![inputPath hasSuffix:@"/"]) {
                 [_stack addObject:inputPath.lastPathComponent];
+                NSString *keep = [_baseOutputDir stringByAppendingPathComponent:inputPath.lastPathComponent];
+                [_pathsToKeep addObject:keep];
+            }
 
             // Walk the hierarchy
             [self walk:inputPath fileVisitor:^(NSString *path) {
@@ -92,6 +97,74 @@
 
     // Wait for the transcoding threads
     dispatch_group_wait(_transcoding_group, DISPATCH_TIME_FOREVER);
+
+    // Delete extraneous files and directories
+    if (self.deleteExtraneous) {
+        NSMutableArray *dirsToDelete = [NSMutableArray array];
+
+        [self walk:outputDir fileVisitor:^(NSString *path) {
+            if ([_pathsToKeep containsObject:path]) {
+                return;
+            }
+
+            if (!self.dryRun) {
+                NSError *error;
+                BOOL success = [[NSFileManager defaultManager] removeItemAtPath:path error:&error];
+                if (!success) {
+                    SCVConsoleLogError(@"failed to delete `%@': %@", path.lastPathComponent,
+                                       error.localizedDescription);
+                    return;
+                }
+            }
+
+            if (!self.quiet) {
+                SCVConsolePrint(@"Deleted `%@'", path.lastPathComponent);
+            }
+        } dirVisitor:^BOOL(NSString *path) {
+            // We can't delete this directory yet because the
+            // file visitor hasn't reached it yet
+            if (![_pathsToKeep containsObject:path]) {
+                [dirsToDelete addObject:path];
+            }
+
+            return YES;
+        }];
+
+        // Sort the paths by depth so deletion works (we must delete
+        // the deepest paths before we can delete their parents)
+        [dirsToDelete sortUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+            int num1 = ((NSString *)obj1).pathComponents.count;
+            int num2 = ((NSString *)obj2).pathComponents.count;
+            if (num1 < num2) {
+                return NSOrderedDescending;
+            } else if (num2 < num1) {
+                return NSOrderedAscending;
+            } else {
+                return NSOrderedSame;
+            }
+        }];
+
+        // Now we can delete those directores if they're not empty
+        for (NSString *path in dirsToDelete) {
+            NSError *error;
+            if (!self.dryRun) {
+                NSFileManager *fm = [NSFileManager defaultManager];
+                NSArray *contents = [fm contentsOfDirectoryAtPath:path error:NULL];
+                if (!contents.count) {
+                    BOOL success = [[NSFileManager defaultManager] removeItemAtPath:path error:&error];
+                    if (!success) {
+                        SCVConsoleLogError(@"failed to delete `%@': %@", path.lastPathComponent,
+                                           error.localizedDescription);
+                        continue;
+                    }
+                }
+            }
+
+            if (!self.quiet) {
+                SCVConsolePrint(@"Deleted `%@'", path.lastPathComponent);
+            }
+        }
+    }
 
     if (self.dryRun) {
         SCVConsoleLog(@"finished running in dry-run mode, no actual changes made");
@@ -203,6 +276,9 @@
                            inputPath.lastPathComponent);
         return;
     }
+
+    [_pathsToKeep addObject:[outputPath stringByDeletingLastPathComponent]];
+    [_pathsToKeep addObject:outputPath];
 
     if (self.overwriteMode != kSCVWalkerOverwriteModeAlways) {
         NSDictionary *outputAttrs = [fm attributesOfItemAtPath:outputPath error:NULL];

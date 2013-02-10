@@ -77,7 +77,7 @@ static int autorelease_main(int argc, char **argv)
                 break;
             }
             case 'd':
-                // TODO
+                walker.deleteExtraneous = YES;
                 break;
             case 'e':
                 encoderName = [NSString stringWithCString:optarg encoding:NSUTF8StringEncoding];

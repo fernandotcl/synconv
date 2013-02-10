@@ -36,6 +36,8 @@ typedef enum : unsigned char {
 
 @property (nonatomic, assign) BOOL copyOther;
 
+@property (nonatomic, assign) BOOL deleteExtraneous;
+
 @property (nonatomic, assign) BOOL dryRun;
 
 @property (nonatomic, assign) int numThreads;
