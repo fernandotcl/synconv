@@ -7,7 +7,9 @@
  *
  */
 
+#import "SCVFlacPlugin.h"
 #import "SCVLamePlugin.h"
+#import "SCVVorbisPlugin.h"
 #import "SCVPluginManager.h"
 
 @implementation SCVPluginManager {
@@ -28,7 +30,11 @@
 {
     self = [super init];
     if (self) {
-        _plugins = @[[SCVLamePlugin new]];
+        _plugins = @[
+            [SCVFlacPlugin new],
+            [SCVLamePlugin new],
+            [SCVVorbisPlugin new]
+        ];
         for (id <SCVPlugin> plugin in _plugins) {
             [plugin checkExecutables];
         }

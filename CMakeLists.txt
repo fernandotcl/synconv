@@ -15,7 +15,9 @@ set(SYNCONV_SOURCES
     src/SCVTagger.mm
     src/SCVWalker.m
     src/main.m
-    src/plugins/SCVLamePlugin.m)
+    src/plugins/SCVFlacPlugin.m
+    src/plugins/SCVLamePlugin.m
+    src/plugins/SCVVorbisPlugin.m)
 
 set(SYNCONV_HEADERS
     src/SCVConsole.h
@@ -25,7 +27,9 @@ set(SYNCONV_HEADERS
     src/SCVPluginManager.h
     src/SCVTagger.h
     src/SCVWalker.h
-    src/plugins/SCVLamePlugin.h)
+    src/plugins/SCVFlacPlugin.h
+    src/plugins/SCVLamePlugin.h
+    src/plugins/SCVVorbisPlugin.h)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}/src
