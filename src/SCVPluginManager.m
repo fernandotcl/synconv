@@ -35,21 +35,21 @@
             [SCVLamePlugin new],
             [SCVVorbisPlugin new]
         ];
-        for (id <SCVPlugin> plugin in _plugins) {
+        for (SCVPlugin *plugin in _plugins) {
             [plugin checkExecutables];
         }
     }
     return self;
 }
 
-- (SCVPlugin <SCVPlugin> *)pluginForEncodingWithName:(NSString *)name
+- (SCVPlugin <SCVEncoder> *)pluginForEncodingWithName:(NSString *)name
 {
     name = name.lowercaseString;
-    for (SCVPlugin <SCVPlugin> *plugin in _plugins) {
+    for (SCVPlugin *plugin in _plugins) {
         if (plugin.enabledForEncoding) {
             for (NSString *alias in [plugin pluginAliases]) {
                 if ([name isEqualToString:alias]) {
-                    return plugin;
+                    return (SCVPlugin <SCVEncoder> *)plugin;
                 }
             }
         }
@@ -57,13 +57,13 @@
     return nil;
 }
 
-- (SCVPlugin <SCVPlugin> *)pluginForDecodingFileWithExtension:(NSString *)extension
+- (SCVPlugin <SCVDecoder> *)pluginForDecodingFileWithExtension:(NSString *)extension
 {
-    for (SCVPlugin <SCVPlugin> *plugin in _plugins) {
+    for (SCVPlugin *plugin in _plugins) {
         if (plugin.enabledForDecoding) {
             NSArray *extensions = [(SCVPlugin <SCVDecoder> *)plugin decoderExtensions];
             if ([extensions indexOfObject:extension] != NSNotFound) {
-                return plugin;
+                return (SCVPlugin <SCVDecoder> *) plugin;
             }
         }
     }

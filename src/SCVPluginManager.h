@@ -9,14 +9,16 @@
 
 #import <Foundation/Foundation.h>
 
+#import "SCVDecoder.h"
+#import "SCVEncoder.h"
 #import "SCVPlugin.h"
 
 @interface SCVPluginManager : NSObject
 
 + (instancetype)sharedInstance;
 
-- (SCVPlugin <SCVPlugin> *)pluginForEncodingWithName:(NSString *)name;
+- (SCVPlugin <SCVEncoder> *)pluginForEncodingWithName:(NSString *)name;
 
-- (SCVPlugin <SCVPlugin> *)pluginForDecodingFileWithExtension:(NSString *)extension;
+- (SCVPlugin <SCVDecoder> *)pluginForDecodingFileWithExtension:(NSString *)extension;
 
 @end

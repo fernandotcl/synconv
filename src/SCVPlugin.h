@@ -17,7 +17,11 @@
 
 @property (nonatomic, assign) BOOL enabledForEncoding;
 
+- (NSString *)pluginName;
+
 - (NSArray *)pluginAliases;
+
+- (void)checkExecutables;
 
 - (void)findPathForDecoderExecutable:(NSArray *)executableNames;
 
@@ -30,13 +34,5 @@
 
 - (NSTask *)encoderTaskWithPrefixArguments:(NSArray *)prefixArguments
                            suffixArguments:(NSArray *)suffixArguments;
-
-@end
-
-@protocol SCVPlugin <NSObject>
-
-- (NSString *)pluginName;
-
-- (void)checkExecutables;
 
 @end

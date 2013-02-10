@@ -26,16 +26,27 @@
     return self;
 }
 
+- (NSString *)pluginName
+{
+    [self doesNotRecognizeSelector:_cmd];
+    return nil;
+}
+
 - (NSArray *)pluginAliases
 {
-    return @[[(SCVPlugin <SCVPlugin> *)self pluginName]];
+    return @[[self pluginName]];
+}
+
+- (void)checkExecutables
+{
+    [self doesNotRecognizeSelector:_cmd];
 }
 
 - (void)findPathForDecoderExecutable:(NSArray *)executableNames
 {
     _decoderPath = [self pathForExecutable:executableNames];
     if (!_decoderPath) {
-        NSString *name = [(SCVPlugin <SCVPlugin> *)self pluginName];
+        NSString *name = [self pluginName];
         SCVConsoleLogError(@"plugin `%@' disabled for decoding (executable not found)", name);
         self.enabledForDecoding = NO;
     }
@@ -45,7 +56,7 @@
 {
     _encoderPath = [self pathForExecutable:executableNames];
     if (!_encoderPath) {
-        NSString *name = [(SCVPlugin <SCVPlugin> *)self pluginName];
+        NSString *name = [self pluginName];
         SCVConsoleLogError(@"plugin `%@' disabled for encoding (executable not found)", name);
         self.enabledForEncoding = NO;
     }
@@ -56,7 +67,7 @@
     _decoderPath = [self pathForExecutable:executableNames];
     _encoderPath = _decoderPath;
     if (!_decoderPath) {
-        NSString *name = [(SCVPlugin <SCVPlugin> *)self pluginName];
+        NSString *name = [self pluginName];
         SCVConsoleLogError(@"plugin `%@' disabled (executable not found)", name);
         self.enabledForDecoding = NO;
         self.enabledForEncoding = NO;

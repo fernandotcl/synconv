@@ -23,7 +23,7 @@ typedef enum : unsigned char {
 
 - (void)walk:(NSArray *)inputPaths outputDir:(NSString *)outputDir;
 
-@property (nonatomic, strong) SCVPlugin <SCVEncoder, SCVPlugin> *encoder;
+@property (nonatomic, strong) SCVPlugin <SCVEncoder> *encoder;
 
 @property (nonatomic, strong) NSString *encoderExtension;
 

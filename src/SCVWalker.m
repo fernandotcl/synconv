@@ -268,8 +268,8 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
     }
 
     NSString *extension = inputPath.pathExtension.lowercaseString;
-    SCVPlugin <SCVDecoder, SCVPlugin> *decoder = (SCVPlugin <SCVDecoder, SCVPlugin> *)
-        [[SCVPluginManager sharedInstance] pluginForDecodingFileWithExtension:extension];
+    SCVPlugin <SCVDecoder> *decoder = [[SCVPluginManager sharedInstance]
+                                       pluginForDecodingFileWithExtension:extension];
     BOOL transcoding = decoder && (self.reencode || ![decoder isEqualTo:self.encoder]);
 
     if (transcoding && self.noTranscodingExtensions) {
@@ -390,7 +390,7 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
 
 - (BOOL)runTranscodingPipelineForInputPath:(NSString *)inputPath
                                 inputAttrs:(NSDictionary *)inputAttrs
-                                   decoder:(SCVPlugin <SCVPlugin, SCVDecoder> *)decoder
+                                   decoder:(SCVPlugin <SCVDecoder> *)decoder
                                 outputPath:(NSString *)outputPath
 {
     NSFileHandle *inputHandle = [NSFileHandle fileHandleForReadingAtPath:inputPath];

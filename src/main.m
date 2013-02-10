@@ -15,7 +15,6 @@
 
 #import "SCVConservativeRenamingFilter.h"
 #import "SCVConsole.h"
-#import "SCVEncoder.h"
 #import "SCVPluginManager.h"
 #import "SCVWalker.h"
 
@@ -175,15 +174,14 @@ static int autorelease_main(int argc, char **argv)
         encoderName = @"lame";
     }
 
-    walker.encoder = (SCVPlugin <SCVEncoder, SCVPlugin> *)
-        [[SCVPluginManager sharedInstance] pluginForEncodingWithName:encoderName];
+    walker.encoder = [[SCVPluginManager sharedInstance] pluginForEncodingWithName:encoderName];
     if (!walker.encoder) {
         SCVConsoleLogError(@"bad encoder: `%s'", encoderName.UTF8String);
         return EXIT_FAILURE;
     }
 
     if (!walker.encoderExtension) {
-        walker.encoderExtension = [(id <SCVEncoder>)walker.encoder preferredEncoderExtension];
+        walker.encoderExtension = [walker.encoder preferredEncoderExtension];
     }
 
     walker.noTranscodingExtensions = noTranscodingExtensions;

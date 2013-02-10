@@ -11,6 +11,6 @@
 #import "SCVEncoder.h"
 #import "SCVPlugin.h"
 
-@interface SCVLamePlugin : SCVPlugin <SCVDecoder, SCVEncoder, SCVPlugin>
+@interface SCVLamePlugin : SCVPlugin <SCVDecoder, SCVEncoder>
 
 @end
