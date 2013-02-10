@@ -207,7 +207,7 @@
             return;
         }
 
-        if (!_currentOutputDir) {
+        if (!_currentOutputDirCreated) {
             [self createOutputDir];
         }
 
