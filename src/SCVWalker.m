@@ -50,7 +50,7 @@
     // well as CPU bound, so GCD might launch a lot of threads that will
     // make things even worse if we're blocked for I/O
     if (!self.numThreads) {
-        self.numThreads = [NSProcessInfo processInfo].processorCount * 2;
+        self.numThreads = [NSProcessInfo processInfo].processorCount;
     }
     _transcoding_semaphore = dispatch_semaphore_create(self.numThreads);
 
