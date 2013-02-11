@@ -366,17 +366,18 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
         [self createOutputDir];
     }
 
+    dispatch_semaphore_wait(_transcoding_semaphore, DISPATCH_TIME_FOREVER);
+
     dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
     dispatch_group_async(_transcoding_group, queue, ^{
         if (!self.dryRun) {
-            dispatch_semaphore_wait(_transcoding_semaphore, DISPATCH_TIME_FOREVER);
             BOOL success = [self runTranscodingPipelineForInputPath:inputPath
                                                          inputAttrs:inputAttrs
                                                             decoder:decoder
                                                          outputPath:outputPath];
-            dispatch_semaphore_signal(_transcoding_semaphore);
 
             if (!success) {
+                dispatch_semaphore_signal(_transcoding_semaphore);
                 return;
             }
         }
@@ -385,6 +386,8 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
             NSString *action = [decoder isEqualTo:self.encoder] ? @"Re-encoded" : @"Transcoded";
             SCVConsolePrint(@"%@ `%@'", action, outputFilename);
         }
+
+        dispatch_semaphore_signal(_transcoding_semaphore);
     });
 }
 
