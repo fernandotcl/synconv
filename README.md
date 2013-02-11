@@ -19,7 +19,7 @@ A brief list of features:
 
 ##Usage
 
-Use it as you would use rsync. By default, synconv will transcode to MP3 and will only use a single thread:
+Use it as you would use rsync. By default, synconv will transcode to MP3 and will only use multiple threads for transcoding. Existing MP3 files will not be re-encoded:
 
 ```sh
 synconv /music/Artist /media/phone/
