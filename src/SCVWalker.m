@@ -54,6 +54,10 @@
     }
     _transcoding_semaphore = dispatch_semaphore_create(self.numThreads);
 
+    if (self.verbose) {
+        SCVConsoleLog(@"using up to %d threads for transcoding", self.numThreads);
+    }
+
     _baseOutputDir = [self absolutePathWithPath:outputDir];
 
     NSFileManager *fm = [NSFileManager defaultManager];
