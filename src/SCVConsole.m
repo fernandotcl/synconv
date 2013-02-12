@@ -27,6 +27,7 @@
     dispatch_queue_t _queue;
     NSMutableArray *_floatingLines;
     BOOL _printFloating;
+    NSMutableData *_stdoutBuffer;
 }
 
 + (instancetype)sharedInstance
@@ -45,7 +46,11 @@
     if (self) {
         _queue = dispatch_queue_create("com.fernandotcl.synconv.SCVConsole", NULL);
         _floatingLines = [NSMutableArray new];
+
         _printFloating = isatty(fileno(stdout));
+        if (_printFloating) {
+            _stdoutBuffer = [NSMutableData dataWithLength:BUFSIZ];
+        }
     }
     return self;
 }
@@ -111,20 +116,30 @@
 
 - (void)clearFloatingLines
 {
-    if (_printFloating) {
-        for (SCVFloatingLine *line in _floatingLines) {
-            printf("\033[F\033[J");
-        }
+    if (!_printFloating) {
+        return;
+    }
+
+    // Buffer stdout to avoid flickering
+    setvbuf(stdout, _stdoutBuffer.mutableBytes, _IOFBF, _stdoutBuffer.length);
+
+    for (SCVFloatingLine *line in _floatingLines) {
+        printf("\033[F\033[J");
     }
 }
 
 - (void)drawFloatingLines
 {
-    if (_printFloating) {
-        for (SCVFloatingLine *line in _floatingLines) {
-            printf("%s\n", line.content.UTF8String);
-        }
+    if (!_printFloating) {
+        return;
     }
+
+    for (SCVFloatingLine *line in _floatingLines) {
+        printf("%s\n", line.content.UTF8String);
+    }
+
+    // Restore the default line-based buffering
+    setvbuf(stdout, _stdoutBuffer.mutableBytes, _IOLBF, _stdoutBuffer.length);
 }
 
 @end
