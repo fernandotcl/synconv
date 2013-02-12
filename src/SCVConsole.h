@@ -20,3 +20,6 @@ void SCVConsolePrintError(NSString *format, ...) __attribute__((format(__NSStrin
 
 void SCVConsoleLog(NSString *format, ...) __attribute__((format(__NSString__, 1, 2)));
 void SCVConsoleLogError(NSString *format, ...) __attribute__((format(__NSString__, 1, 2)));
+
+void SCVConsoleFloat(NSString *format, ...) __attribute__((format(__NSString__, 1, 2)));
+void SCVConsoleUnfloat(NSString *format, ...) __attribute__((format(__NSString__, 1, 2)));

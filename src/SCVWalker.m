@@ -353,11 +353,15 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
             [self createOutputDir];
         }
 
+        NSString *actionLine = [NSString stringWithFormat:@"Copying `%@'...", outputFilename];
+        SCVConsoleFloat(@"%@", actionLine);
+
         if (!self.dryRun) {
             [fm removeItemAtPath:outputPath error:NULL];
             if (![fm copyItemAtPath:inputPath toPath:outputPath error:&error]) {
                 SCVConsoleLogError(@"failed to copy `%@': %@", outputFilename,
                                    error.localizedDescription);
+                SCVConsoleUnfloat(@"%@ FAILED", actionLine);
                 return;
             }
 
@@ -365,7 +369,7 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
         }
 
         if (!self.quiet) {
-            SCVConsolePrint(@"Copied `%@'", outputFilename);
+            SCVConsoleUnfloat(@"%@ OK", actionLine);
         }
 
         return;
@@ -379,6 +383,10 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
 
     dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
     dispatch_group_async(_transcoding_group, queue, ^{
+        NSString *action = [decoder isEqualTo:self.encoder] ? @"Re-encoding" : @"Transcoding";
+        NSString *actionLine = [action stringByAppendingFormat:@" `%@'...", outputFilename];
+        SCVConsoleFloat(@"%@", actionLine);
+
         if (!self.dryRun) {
             BOOL success = [self runTranscodingPipelineForInputPath:inputPath
                                                          inputAttrs:inputAttrs
@@ -386,14 +394,14 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
                                                          outputPath:outputPath];
 
             if (!success) {
+                SCVConsoleUnfloat(@"%@ FAILED", actionLine);
                 dispatch_semaphore_signal(_transcoding_semaphore);
                 return;
             }
         }
 
         if (!self.quiet) {
-            NSString *action = [decoder isEqualTo:self.encoder] ? @"Re-encoded" : @"Transcoded";
-            SCVConsolePrint(@"%@ `%@'", action, outputFilename);
+            SCVConsoleUnfloat(@"%@ OK", actionLine);
         }
 
         dispatch_semaphore_signal(_transcoding_semaphore);
