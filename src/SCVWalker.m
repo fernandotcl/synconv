@@ -310,7 +310,7 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
     }
     outputPath = [_currentOutputDir stringByAppendingPathComponent:outputFilename];
 
-    [_pathsToKeep addObject:[outputPath stringByDeletingLastPathComponent]];
+    [_pathsToKeep addObject:_currentOutputDir];
     [_pathsToKeep addObject:outputPath];
 
     if (self.overwriteMode != kSCVWalkerOverwriteModeAlways) {
