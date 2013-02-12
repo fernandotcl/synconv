@@ -60,6 +60,7 @@
             }
         }
         [self drawFloatingLines];
+        fflush(fp);
     });
 }
 
@@ -74,6 +75,7 @@
         [self clearFloatingLines];
         fprintf(fp, PROGRAM_NAME ": %s\n", str.UTF8String);
         [self drawFloatingLines];
+        fflush(fp);
     });
 }
 
@@ -90,6 +92,7 @@
         }
         floatingLine.content = str;
         [self drawFloatingLines];
+        fflush(stdout);
     });
 }
 
