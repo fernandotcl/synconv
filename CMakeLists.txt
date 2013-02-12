@@ -13,6 +13,7 @@ set(SYNCONV_SOURCES
     src/SCVConsole.m
     src/SCVPlugin.m
     src/SCVPluginManager.m
+    src/SCVProgressMonitor.m
     src/SCVRenamingFilter.m
     src/SCVTagger.mm
     src/SCVWalker.m
@@ -28,6 +29,7 @@ set(SYNCONV_HEADERS
     src/SCVEncoder.h
     src/SCVPlugin.h
     src/SCVPluginManager.h
+    src/SCVProgressMonitor.h
     src/SCVRenamingFilter.h
     src/SCVTagger.h
     src/SCVWalker.h

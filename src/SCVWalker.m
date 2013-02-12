@@ -12,6 +12,7 @@
 #import "SCVConsole.h"
 #import "SCVDecoder.h"
 #import "SCVPluginManager.h"
+#import "SCVProgressMonitor.h"
 #import "SCVTagger.h"
 #import "SCVWalker.h"
 
@@ -388,10 +389,14 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
         SCVConsoleFloat(@"%@", actionLine);
 
         if (!self.dryRun) {
+            id progressBlock = ^(int progress) {
+                SCVConsoleFloat(@"%@ %d%%", actionLine, progress);
+            };
             BOOL success = [self runTranscodingPipelineForInputPath:inputPath
                                                          inputAttrs:inputAttrs
                                                             decoder:decoder
-                                                         outputPath:outputPath];
+                                                         outputPath:outputPath
+                                                      progressBlock:progressBlock];
 
             if (!success) {
                 SCVConsoleUnfloat(@"%@ FAILED", actionLine);
@@ -412,6 +417,7 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
                                 inputAttrs:(NSDictionary *)inputAttrs
                                    decoder:(SCVPlugin <SCVDecoder> *)decoder
                                 outputPath:(NSString *)outputPath
+                             progressBlock:(void (^)(int))progressBlock
 {
     NSFileHandle *inputHandle = [NSFileHandle fileHandleForReadingAtPath:inputPath];
     if (!inputHandle) {
@@ -432,8 +438,20 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
         return NO;
     }
 
+    SCVProgressMonitor *progressMonitor;
+    unsigned long long fileSize = [inputAttrs[NSFileSize] unsignedLongLongValue];
+    if (fileSize > 0LL) {
+        progressMonitor = [SCVProgressMonitor monitorWithFileHandle:inputHandle
+                                                           fileSize:fileSize
+                                                    progressBlock:progressBlock];
+    }
+
     NSTask *decoderTask = [decoder decoderTask];
-    decoderTask.standardInput = inputHandle;
+    if (progressMonitor) {
+        decoderTask.standardInput = progressMonitor.pipe;
+    } else {
+        decoderTask.standardInput = inputHandle;
+    }
     decoderTask.standardOutput = [NSPipe pipe];
 
     NSTask *encoderTask = [self.encoder encoderTask];
