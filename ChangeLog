@@ -3,6 +3,7 @@
 
 * Converted to Objective-C, Cocoa and GCD.
 * Uses multiple threads for transcoding by default.
+* Shows transcoding progress.
 
 1.1.2
 =====
