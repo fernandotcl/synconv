@@ -59,10 +59,8 @@ You don't need all of them, just the ones you will use.
 To compile and install:
 
 ```sh
-mkdir /path/to/build_dir
-cd /path/to/build_dir
-cmake -DCMAKE_INSTALL_PREFIX=/path/to/install_dir /path/to/source_dir
-make
+cd /path/to/source
+cmake .
 make install
 ```
 
