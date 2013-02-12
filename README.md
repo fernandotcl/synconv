@@ -26,6 +26,46 @@ synconv /music/Artist /media/phone/
 
 See `synconv(1)` for more examples.
 
+## Installing
+
+The easiest way to install synconv is through [Homebrew][]. There is a formula for synconv in [my Homebrew tap][tap].
+
+[homebrew]: http://mxcl.github.com/homebrew/
+[tap]: https://github.com/fernandotcl/homebrew-fernandotcl
+
+If you're compiling from source, you will need:
+
+* [TagLib][]
+* [pkg-config][]
+* [CMake][]
+
+[taglib]: http://taglib.github.com/
+[pkg-config]: http://www.freedesktop.org/wiki/Software/pkg-config
+[cmake]: http://www.cmake.org/
+
+You probably want the encoders and decoders too. We currently support:
+
+* [flac] (for FLAC encoding and decoding)
+* [lame] (for MP3 encoding and decoding)
+* oggenc (for Ogg Vorbis encoding, part of [vorbis-tools])
+* oggdec (for Ogg Vorbis decoding, part of [vorbis-tools])
+
+[flac]: http://flac.sourceforge.net/
+[lame]: http://lame.sourceforge.net/
+[vorbis-tools]: http://www.vorbis.com/
+
+You don't need all of them, just the ones you will use.
+
+To compile and install:
+
+```sh
+mkdir /path/to/build_dir
+cd /path/to/build_dir
+cmake -DCMAKE_INSTALL_PREFIX=/path/to/install_dir /path/to/source_dir
+make
+make install
+```
+
 ## Credits
 
 synconv was created by [Fernando Tarlá Cardoso Lemos](mailto:fernandotcl@gmail.com).
