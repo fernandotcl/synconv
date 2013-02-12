@@ -61,11 +61,12 @@
     _baseOutputDir = [self absolutePathWithPath:outputDir];
 
     NSFileManager *fm = [NSFileManager defaultManager];
-    for (__strong NSString *inputPath in inputPaths) {
-        // Make sure the stack is clear
-        [_stack removeAllObjects];
+    for (NSString *originalInputPath in inputPaths) {
+        _currentOutputDir = _baseOutputDir;
+        _currentOutputDirCreated = self.dryRun;
+        _currentOutputDirCreationFailed = NO;
 
-        inputPath = [self absolutePathWithPath:inputPath];
+        NSString *inputPath = [self absolutePathWithPath:originalInputPath];
 
         BOOL isDirectory;
         [fm fileExistsAtPath:inputPath isDirectory:&isDirectory];
@@ -73,10 +74,14 @@
             // If the last character of the input directory is the path separator
             // or if the output directory doesn't exist, copy its contents instead
             // (like the Unix cp command does)
-            if (![inputPath hasSuffix:@"/"]) {
-                [_stack addObject:inputPath.lastPathComponent];
-                NSString *keep = [_baseOutputDir stringByAppendingPathComponent:inputPath.lastPathComponent];
-                [_pathsToKeep addObject:keep];
+            if (![originalInputPath hasSuffix:@"/"]) {
+                NSString *outputDir = inputPath.lastPathComponent;
+                if (self.renamingFilter) {
+                    outputDir = [self.renamingFilter renamedPathComponent:outputDir];
+                }
+                _baseOutputDir = [_currentOutputDir stringByAppendingPathComponent:outputDir];
+                _currentOutputDir = _baseOutputDir;
+                [_pathsToKeep addObject:_baseOutputDir];
             }
 
             // Walk the hierarchy
@@ -92,7 +97,6 @@
             NSDictionary *attrs = [fm attributesOfItemAtPath:inputPath error:NULL];
             BOOL isRegularFile = [attrs[NSFileType] isEqualToString:NSFileTypeRegular];
             if (isRegularFile) {
-                _currentOutputDir = _baseOutputDir;
                 [self visitFile:inputPath];
             } else {
                 SCVConsoleLogError(@"skipping `%@' (not a regular file or directory)",
@@ -253,6 +257,7 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
     }
 
     _currentOutputDirCreated = self.dryRun;
+    _currentOutputDirCreationFailed = NO;
 
     return YES;
 }
