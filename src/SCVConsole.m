@@ -8,6 +8,7 @@
  */
 
 #import <stdio.h>
+#import <unistd.h>
 
 #import "SCVConsole.h"
 
@@ -25,6 +26,7 @@
 @implementation SCVConsole {
     dispatch_queue_t _queue;
     NSMutableArray *_floatingLines;
+    BOOL _printFloating;
 }
 
 + (instancetype)sharedInstance
@@ -43,6 +45,7 @@
     if (self) {
         _queue = dispatch_queue_create("com.fernandotcl.synconv.SCVConsole", NULL);
         _floatingLines = [NSMutableArray new];
+        _printFloating = isatty(fileno(stdout));
     }
     return self;
 }
@@ -108,15 +111,19 @@
 
 - (void)clearFloatingLines
 {
-    for (SCVFloatingLine *line in _floatingLines) {
-        printf("\033[F\033[J");
+    if (_printFloating) {
+        for (SCVFloatingLine *line in _floatingLines) {
+            printf("\033[F\033[J");
+        }
     }
 }
 
 - (void)drawFloatingLines
 {
-    for (SCVFloatingLine *line in _floatingLines) {
-        printf("%s\n", line.content.UTF8String);
+    if (_printFloating) {
+        for (SCVFloatingLine *line in _floatingLines) {
+            printf("%s\n", line.content.UTF8String);
+        }
     }
 }
 
