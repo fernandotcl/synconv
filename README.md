@@ -69,3 +69,7 @@ make install
 ## Credits
 
 synconv was created by [Fernando Tarlá Cardoso Lemos](mailto:fernandotcl@gmail.com).
+
+## License
+
+synconv is available under the BSD 2-clause license. See the LICENSE file for more information.
