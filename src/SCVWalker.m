@@ -332,7 +332,7 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
 
             // If overwrite mode is "auto", check timestamps
             NSDate *inputDate = inputAttrs[NSFileModificationDate];
-            NSDate *outputDate = inputAttrs[NSFileModificationDate];
+            NSDate *outputDate = outputAttrs[NSFileModificationDate];
             if ([outputDate isGreaterThanOrEqualTo:inputDate]) {
                 if (self.verbose) {
                     SCVConsoleLog(@"skipping `%@' (up-to-date)", outputFilename);
