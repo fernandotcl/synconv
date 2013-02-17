@@ -11,6 +11,7 @@ add_definitions(-DPROGRAM_NAME=\"${PROJECT_NAME}\")
 set(SYNCONV_SOURCES
     src/SCVConservativeRenamingFilter.m
     src/SCVConsole.m
+    src/SCVPathReference.m
     src/SCVPlugin.m
     src/SCVPluginManager.m
     src/SCVProgressMonitor.m
@@ -27,6 +28,7 @@ set(SYNCONV_HEADERS
     src/SCVConsole.h
     src/SCVDecoder.h
     src/SCVEncoder.h
+    src/SCVPathReference.h
     src/SCVPlugin.h
     src/SCVPluginManager.h
     src/SCVProgressMonitor.h

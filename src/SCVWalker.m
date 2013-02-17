@@ -11,6 +11,7 @@
 
 #import "SCVConsole.h"
 #import "SCVDecoder.h"
+#import "SCVPathReference.h"
 #import "SCVPluginManager.h"
 #import "SCVProgressMonitor.h"
 #import "SCVTagger.h"
@@ -82,7 +83,7 @@
                 }
                 _baseOutputDir = [_currentOutputDir stringByAppendingPathComponent:outputDir];
                 _currentOutputDir = _baseOutputDir;
-                [_pathsToKeep addObject:_baseOutputDir];
+                [_pathsToKeep addObject:[SCVPathReference pathReferenceWithPath:_baseOutputDir]];
             }
 
             // Walk the hierarchy
@@ -114,7 +115,8 @@
         NSMutableArray *dirsToDelete = [NSMutableArray array];
 
         [self walk:outputDir fileVisitor:^(NSString *path) {
-            if ([_pathsToKeep containsObject:path]) {
+            SCVPathReference *pathReference = [SCVPathReference pathReferenceWithPath:path];
+            if ([_pathsToKeep containsObject:pathReference]) {
                 return;
             }
 
@@ -134,7 +136,8 @@
         } dirVisitor:^BOOL(NSString *path) {
             // We can't delete this directory yet because the
             // file visitor hasn't reached it yet
-            if (![_pathsToKeep containsObject:path]) {
+            SCVPathReference *pathReference = [SCVPathReference pathReferenceWithPath:path];
+            if (![_pathsToKeep containsObject:pathReference]) {
                 [dirsToDelete addObject:path];
             }
 
@@ -316,8 +319,8 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
     }
     outputPath = [_currentOutputDir stringByAppendingPathComponent:outputFilename];
 
-    [_pathsToKeep addObject:_currentOutputDir];
-    [_pathsToKeep addObject:outputPath];
+    [_pathsToKeep addObject:[SCVPathReference pathReferenceWithPath:_currentOutputDir]];
+    [_pathsToKeep addObject:[SCVPathReference pathReferenceWithPath:outputPath]];
 
     if (self.overwriteMode != kSCVWalkerOverwriteModeAlways) {
         NSDictionary *outputAttrs = [fm attributesOfItemAtPath:outputPath error:NULL];
