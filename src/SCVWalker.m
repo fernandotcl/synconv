@@ -60,10 +60,11 @@
         SCVConsoleLog(@"using up to %d threads for transcoding", self.numThreads);
     }
 
-    _baseOutputDir = [self absolutePathWithPath:outputDir];
-
+    NSString *baseOutputDirSaved = [self absolutePathWithPath:outputDir];
     NSFileManager *fm = [NSFileManager defaultManager];
+
     for (NSString *originalInputPath in inputPaths) {
+        _baseOutputDir = baseOutputDirSaved;
         _currentOutputDir = _baseOutputDir;
         _currentOutputDirCreated = self.dryRun;
         _currentOutputDirCreationFailed = NO;
