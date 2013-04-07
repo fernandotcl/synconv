@@ -269,7 +269,7 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
 
 - (void)visitDirectoryAfter:(NSString *)path
 {
-    if (!self.recursive) {
+    if (self.recursive) {
         // Pop the directory we had pushed
         [_stack removeLastObject];
     }
