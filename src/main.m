@@ -10,6 +10,7 @@
 #import <Foundation/Foundation.h>
 
 #import <getopt.h>
+#import <signal.h>
 #import <stdlib.h>
 #import <stdio.h>
 
@@ -17,6 +18,21 @@
 #import "SCVConsole.h"
 #import "SCVPluginManager.h"
 #import "SCVWalker.h"
+
+static SCVWalker *walker;
+
+static void signal_handler(int signum)
+{
+    if (signum == SIGINT) {
+        fprintf(stderr, "\nSIGINT caught, cleaning up...\n");
+        [walker interruptChildren];
+    }
+    else {
+        fprintf(stderr, "\nSIGTERM caught, cleaning up...\n");
+        [walker terminateChildren];
+    }
+    exit(EXIT_FAILURE);
+}
 
 static void print_usage(FILE *fp)
 {
@@ -48,7 +64,7 @@ static int autorelease_main(int argc, char **argv)
     };
     const char *options = "CE:N:O:RT:de:hno:qrt:v";
 
-    SCVWalker *walker = [SCVWalker new];
+    walker = [SCVWalker new];
     NSString *encoderName = nil;
     NSMutableArray *additionalEncoderOptions = [NSMutableArray new];
     NSMutableArray *noTranscodingExtensions = [NSMutableArray new];
@@ -185,6 +201,10 @@ static int autorelease_main(int argc, char **argv)
     }
 
     walker.noTranscodingExtensions = noTranscodingExtensions;
+
+    // Handle termination and clean up
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
 
     [walker walk:inputPaths outputDir:outputDir];
 

@@ -29,6 +29,9 @@
 
     dispatch_group_t _transcoding_group;
     dispatch_semaphore_t _transcoding_semaphore;
+
+    NSMutableArray *_runningTasks;
+    BOOL _killed;
 }
 
 - (id)init {
@@ -37,6 +40,7 @@
         _stack = [NSMutableArray arrayWithCapacity:5];
         _pathsToKeep = [NSMutableSet setWithCapacity:100];
         _transcoding_group = dispatch_group_create();
+        _runningTasks = [NSMutableArray array];
 
         self.recursive = YES;
         self.overwriteMode = kSCVWalkerOverwriteModeAuto;
@@ -402,6 +406,10 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
                                                          outputPath:outputPath
                                                       progressBlock:progressBlock];
 
+            if (_killed) {
+                return;
+            }
+
             if (!success) {
                 SCVConsoleUnfloat(@"%@ FAILED", actionLine);
                 dispatch_semaphore_signal(_transcoding_semaphore);
@@ -465,8 +473,21 @@ dirVisitorAfter:(void (^)(NSString *))dirVisitorAfter
     [decoderTask launch];
     [encoderTask launch];
 
+    @synchronized(self) {
+        [_runningTasks addObject:decoderTask];
+        [_runningTasks addObject:encoderTask];
+    }
+
     [decoderTask waitUntilExit];
     [encoderTask waitUntilExit];
+
+    @synchronized(self) {
+        [_runningTasks removeObject:decoderTask];
+        [_runningTasks removeObject:encoderTask];
+        if (_killed) {
+            return NO;
+        }
+    }
 
     BOOL error = YES;
     if (decoderTask.terminationReason == NSTaskTerminationReasonUncaughtSignal) {
@@ -521,6 +542,22 @@ error.localizedDescription);
     if (![fm setAttributes:attrs ofItemAtPath:path error:&error]) {
         SCVConsoleLogError(@"failed to set modification date for `%@': %@",
                            _currentOutputDir, error.localizedDescription);
+    }
+}
+
+- (void)interruptChildren
+{
+    @synchronized(self) {
+        [_runningTasks makeObjectsPerformSelector:@selector(interrupt)];
+        _killed = YES;
+    }
+}
+
+- (void)terminateChildren
+{
+    @synchronized(self) {
+        [_runningTasks makeObjectsPerformSelector:@selector(terminate)];
+        _killed = YES;
     }
 }
 
